@@ -1,0 +1,427 @@
+@import './em-layout-compat.css';
+
+/* =======================================================================
+ *  Design tokens — Molinos del Atlántico / La Nieve
+ * ===================================================================== */
+:root {
+  --em-brand-navy: #0066CC;
+  --em-brand-navy-dark: #103847;
+  --em-brand-red: #DD0A1E;
+  --em-brand-gold: #A37F3E;
+  --em-brand-green: #103847;
+
+  --em-bg: #ffffff;
+  --em-surface: #ffffff;
+  --em-border: #FCEDD9;
+  --em-text: #103847;
+  --em-text-muted: #103847;
+  --em-primary-ghost: rgba(0, 102, 204, 0.08);
+  --em-primary-border: rgba(0, 102, 204, 0.22);
+  --em-radius: 12px;
+  --em-radius-sm: 8px;
+  --em-shadow: 0 1px 3px rgba(0, 102, 204, 0.07);
+  --em-shadow-md: 0 4px 14px rgba(0, 102, 204, 0.09);
+
+  /* PrimeNG Lara — alinear con marca (sobreescribe tema) */
+  --font-brand: 'Cooper Md BT', 'Cooper Black', Georgia, serif;
+  --font-family: 'D-DIN Condensed Bold', 'D-DIN Condensed', 'DIN Condensed', 'Arial Narrow', Arial, sans-serif;
+  --primary-color: var(--em-brand-navy);
+  --primary-color-text: #ffffff;
+  --text-color: var(--em-text);
+  --text-color-secondary: var(--em-text-muted);
+  --surface-ground: var(--em-bg);
+  --surface-border: var(--em-border);
+  --surface-card: #ffffff;
+  --focus-ring: 0 0 0 0.2rem rgba(0, 102, 204, 0.22);
+  --highlight-bg: rgba(0, 102, 204, 0.08);
+  --highlight-text-color: var(--em-brand-navy-dark);
+  --border-radius: 8px;
+}
+
+/* Material 3 system tokens → marca corporativa */
+html {
+  --mat-sys-primary: var(--em-brand-navy);
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #FCEFD9;
+  --mat-sys-on-primary-container: #103847;
+  --mat-sys-surface-tint: var(--em-brand-navy);
+
+  --mat-sys-tertiary: var(--em-brand-gold);
+  --mat-sys-on-tertiary: #ffffff;
+  --mat-sys-tertiary-container: #E9C04C;
+  --mat-sys-on-tertiary-container: #A37F3E;
+
+  --mat-sys-error: var(--em-brand-red);
+  --mat-sys-on-error: #ffffff;
+  --mat-sys-error-container: #FCEFD9;
+  --mat-sys-on-error-container: #C7272D;
+}
+
+/* Ajustes globales para mat-form-field (appearance=outline) */
+html body .mat-mdc-form-field {
+  width: 100%;
+  display: block;
+}
+html body .mat-mdc-form-field .mat-mdc-form-field-flex,
+html body .mat-mdc-form-field .mat-mdc-text-field-wrapper,
+html body .mat-mdc-form-field .mat-mdc-form-field-infix {
+  width: 100% !important;
+}
+html body .mat-mdc-form-field input,
+html body .mat-mdc-form-field .mat-mdc-input-element,
+html body .mat-mdc-form-field .mdc-text-field__input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+}
+.mdc-text-field--outlined .mat-mdc-text-field-wrapper,
+.mat-mdc-text-field-wrapper {
+  background-color: #ffffff !important;
+}
+.mat-mdc-form-field-focus-overlay {
+  background-color: transparent !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+input:autofill {
+  -webkit-text-fill-color: var(--em-text) !important;
+  caret-color: var(--em-text) !important;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  background-color: #ffffff !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+.mdc-text-field--outlined:not(.mdc-text-field--focused):not(.mdc-text-field--invalid)
+  .mdc-notched-outline__leading,
+.mdc-text-field--outlined:not(.mdc-text-field--focused):not(.mdc-text-field--invalid)
+  .mdc-notched-outline__notch,
+.mdc-text-field--outlined:not(.mdc-text-field--focused):not(.mdc-text-field--invalid)
+  .mdc-notched-outline__trailing {
+  border-color: #FCEDD9 !important;
+}
+.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__leading,
+.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__notch,
+.mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__trailing {
+  border-color: var(--em-brand-navy) !important;
+  border-width: 2px !important;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  color: var(--em-text);
+  background: var(--em-bg);
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-brand);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* --------- Botones reutilizables --------- */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-gold,
+.btn-success,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 150ms;
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-gold:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-gold:focus-visible,
+.btn-success:focus-visible,
+.btn-danger:focus-visible {
+  outline: 2px solid var(--em-brand-navy);
+  outline-offset: 1px;
+}
+.btn-primary {
+  color: #fff;
+  background: var(--em-brand-navy);
+  border: 0;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--em-brand-navy-dark);
+}
+.btn-secondary {
+  background: #fff;
+  border: 1px solid var(--em-border);
+  color: var(--em-text);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--em-primary-ghost);
+  border-color: var(--em-primary-border);
+}
+.btn-gold {
+  color: #fff;
+  background: var(--em-brand-gold);
+  border: 0;
+}
+.btn-gold:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+.btn-success {
+  color: #fff;
+  background: var(--em-brand-green);
+  border: 0;
+}
+.btn-danger {
+  color: #fff;
+  background: var(--em-brand-red);
+  border: 0;
+}
+
+.card {
+  background: var(--em-surface);
+  border: 1px solid var(--em-border);
+  border-radius: var(--em-radius);
+  box-shadow: var(--em-shadow);
+  padding: 1.5rem;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  background: #fff;
+  border: 1px solid var(--em-border);
+  color: var(--em-text);
+  box-sizing: border-box;
+}
+.input:focus,
+.select:focus {
+  border-color: var(--em-brand-navy);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.15);
+}
+.input:disabled {
+  background: #f1f3f8;
+}
+
+.label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: var(--em-text);
+}
+.label.mb-0 {
+  margin-bottom: 0;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: color 150ms, background 150ms;
+  border: 0;
+  background: transparent;
+  color: var(--em-text-muted);
+}
+.icon-btn mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+}
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  outline: none;
+}
+.icon-view:hover {
+  background: rgba(0, 102, 204, 0.1);
+  color: var(--em-brand-navy);
+}
+.icon-edit:hover {
+  background: rgba(163, 127, 62, 0.18);
+  color: #A37F3E;
+}
+.icon-delete:hover {
+  background: rgba(221, 10, 30, 0.12);
+  color: var(--em-brand-red);
+}
+.icon-toggle:hover {
+  background: rgba(16, 56, 71, 0.12);
+  color: var(--em-brand-green);
+}
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge-open {
+  background: #FCEFD9;
+  color: #103847;
+}
+.badge-progress {
+  background: #E9C04C;
+  color: #A37F3E;
+}
+.badge-closed {
+  background: #cfe9d9;
+  color: #103847;
+}
+.badge-rejected {
+  background: #FCEFD9;
+  color: #C7272D;
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.page-head h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--em-text);
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .page-head h2 {
+    font-size: 1.5rem;
+  }
+}
+.page-head .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.em-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.em-scroll > table {
+  min-width: 640px;
+}
+
+.em-table {
+  width: 100%;
+  font-size: 0.875rem;
+  table-layout: auto;
+}
+.em-table thead {
+  background: var(--em-primary-ghost);
+}
+.em-table th {
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  font-weight: 600;
+  color: var(--em-brand-navy);
+  border-bottom: 1px solid var(--em-border);
+  white-space: nowrap;
+}
+.em-table td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--em-border);
+  vertical-align: middle;
+}
+.em-table tbody tr:hover {
+  background: var(--em-primary-ghost);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #FCEDD9;
+  border-radius: 10px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #A37F3E;
+}
+
+.mat-mdc-tooltip .mdc-tooltip__surface {
+  background-color: var(--em-brand-navy-dark) !important;
+  color: #fff !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  padding: 6px 10px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 6px 16px rgba(16, 56, 71, 0.25) !important;
+}
+
+/* PrimeNG: acercar tipografía a la marca */
+.p-component {
+  font-family: var(--font-family);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem !important;
+    border-radius: 10px;
+  }
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-gold,
+  .btn-success,
+  .btn-danger {
+    padding: 0.55rem 0.9rem !important;
+    font-size: 0.85rem !important;
+  }
+  input.input,
+  select.input,
+  textarea.input {
+    font-size: 16px;
+  }
+}

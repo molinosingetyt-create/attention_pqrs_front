@@ -1,0 +1,225 @@
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { PqrsService } from '@app/core/services/pqrs.service';
+import { UsuarioService } from '@app/core/services/usuario.service';
+import { AuthService } from '@app/core/services/auth.service';
+import { PQRSListItem, Usuario } from '@app/core/models/api.models';
+
+@Component({
+  selector: 'app-pqrs-list',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterLink, MatIconModule, MatTooltipModule, DatePipe],
+  template: `
+    <div class="space-y-4">
+      <div class="page-head">
+        <h2>PQRS</h2>
+        <div class="actions">
+          <button class="btn-secondary" (click)="exportar()">
+            <mat-icon>download</mat-icon>
+            <span class="hidden sm:inline">Exportar</span> Excel
+          </button>
+          <a routerLink="/pqrs/nuevo" class="btn-primary">
+            <mat-icon>add</mat-icon>
+            <span class="hidden sm:inline">Nueva</span> PQRS
+          </a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+          <input [(ngModel)]="filtros.q" (ngModelChange)="onFilterChange()"
+                 class="input" placeholder="Buscar (radicado, factura, cliente, NIT)..." />
+          <select [(ngModel)]="filtros.tipo" (ngModelChange)="onFilterChange()" class="input">
+            <option value="">Todos los tipos</option>
+            <option value="QUEJA">Queja</option>
+            <option value="RECLAMO">Reclamo</option>
+            <option value="SUGERENCIA">Sugerencia</option>
+            <option value="PETICION">Petición</option>
+            <option value="OTRO">Otro</option>
+          </select>
+          <select [(ngModel)]="filtros.estado" (ngModelChange)="onFilterChange()" class="input">
+            <option value="">Todos los estados</option>
+            <option value="ABIERTA">Abierta</option>
+            <option value="EN_PROCESO">En proceso</option>
+            <option value="CERRADA">Cerrada</option>
+            <option value="RECHAZADA">Rechazada</option>
+          </select>
+          <input type="date" [(ngModel)]="filtros.fecha_desde" (ngModelChange)="onFilterChange()" class="input" />
+          <select *ngIf="puedeFiltrarVendedor()"
+                  [(ngModel)]="filtros.vendedor_id"
+                  (ngModelChange)="onFilterChange()"
+                  class="input sm:col-span-2 lg:col-span-4">
+            <option [ngValue]="''">Todos los vendedores</option>
+            <option *ngFor="let v of vendedores()" [ngValue]="v.id">
+              {{ v.nombre }} · {{ v.email }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Vista tabla (tablet+) -->
+        <div class="em-scroll hidden sm:block">
+          <table class="em-table">
+            <thead>
+              <tr>
+                <th>Radicado</th>
+                <th>Tipo</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Área responsable</th>
+                <th>Factura</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th class="text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of items()">
+                <td class="font-medium text-brand-dark">{{ p.radicado }}</td>
+                <td class="font-medium">{{ p.tipo }}</td>
+                <td>{{ p.cliente_nombre }}</td>
+                <td>{{ p.vendedor_nombre || '—' }}</td>
+                <td>{{ p.area_nombre || '—' }}</td>
+                <td>{{ p.numero_factura || '—' }}</td>
+                <td>
+                  <span class="badge"
+                        [class.badge-open]="p.estado === 'ABIERTA'"
+                        [class.badge-progress]="p.estado === 'EN_PROCESO'"
+                        [class.badge-closed]="p.estado === 'CERRADA'"
+                        [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                    {{ p.estado }}
+                  </span>
+                </td>
+                <td class="text-gray-500 whitespace-nowrap">{{ p.fecha_creacion | date:'dd/MM/yy HH:mm' }}</td>
+                <td class="text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1 justify-end">
+                    <a *ngIf="puedeEditarPQRS()"
+                       [routerLink]="['/pqrs', p.id]"
+                       [queryParams]="{ edit: 1 }"
+                       class="icon-btn icon-edit"
+                       matTooltip="Editar / Gestionar"
+                       aria-label="Editar / Gestionar">
+                      <mat-icon>edit</mat-icon>
+                    </a>
+                    <a [routerLink]="['/pqrs', p.id]"
+                       class="icon-btn icon-view"
+                       matTooltip="Ver detalle"
+                       aria-label="Ver detalle">
+                      <mat-icon>visibility</mat-icon>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              <tr *ngIf="!items().length">
+                <td colspan="9" class="py-6 text-center text-gray-400">Sin resultados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Vista tarjetas (móvil) -->
+        <div class="sm:hidden space-y-2">
+          <a *ngFor="let p of items()" [routerLink]="['/pqrs', p.id]"
+             class="block p-3 rounded-lg border border-border hover:bg-gray-50">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-semibold text-sm">{{ p.radicado }} · {{ p.tipo }}</span>
+              <span class="badge"
+                    [class.badge-open]="p.estado === 'ABIERTA'"
+                    [class.badge-progress]="p.estado === 'EN_PROCESO'"
+                    [class.badge-closed]="p.estado === 'CERRADA'"
+                    [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                {{ p.estado }}
+              </span>
+            </div>
+            <div class="text-sm text-gray-700 truncate">{{ p.cliente_nombre }}</div>
+            <div class="text-xs text-gray-500 mt-1">
+              Área responsable: {{ p.area_nombre || '—' }}
+            </div>
+            <div class="text-xs text-gray-500 mt-1 flex items-center justify-between">
+              <span>Factura: {{ p.numero_factura || '—' }}</span>
+              <span>{{ p.fecha_creacion | date:'dd/MM/yy' }}</span>
+            </div>
+          </a>
+          <div *ngIf="!items().length" class="py-6 text-center text-gray-400 text-sm">
+            Sin resultados.
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between items-start sm:items-center mt-4 text-sm">
+          <span class="text-gray-500">Total: {{ total() }}</span>
+          <div class="flex gap-2 items-center">
+            <button class="btn-secondary" (click)="prev()" [disabled]="page() === 1">Anterior</button>
+            <span class="px-2 py-1">{{ page() }} / {{ pages() || 1 }}</span>
+            <button class="btn-secondary" (click)="next()" [disabled]="page() >= pages()">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+})
+export class PqrsListComponent implements OnInit {
+  private svc = inject(PqrsService);
+  private usuarios = inject(UsuarioService);
+  private auth = inject(AuthService);
+  private snack = inject(MatSnackBar);
+  private debounce: any;
+
+  protected items = signal<PQRSListItem[]>([]);
+  protected total = signal(0);
+  protected page = signal(1);
+  protected pages = signal(0);
+  protected vendedores = signal<Usuario[]>([]);
+  protected filtros: any = { q: '', estado: '', tipo: '', fecha_desde: '', vendedor_id: '' };
+
+  protected puedeFiltrarVendedor = (): boolean =>
+    this.auth.hasRole('ADMINISTRADOR', 'ADMINISTRATIVO_COMERCIAL');
+
+  protected puedeEditarPQRS = (): boolean =>
+    this.auth.hasRole('ADMINISTRADOR');
+
+  ngOnInit(): void {
+    if (this.puedeFiltrarVendedor()) {
+      this.usuarios.vendedores().subscribe({
+        next: (list) => this.vendedores.set(list),
+        error: () => this.vendedores.set([]),
+      });
+    }
+    this.load();
+  }
+
+  load(): void {
+    const params = { ...this.filtros, page: this.page(), size: 20 };
+    if (!params.vendedor_id) delete params.vendedor_id;
+    this.svc.list(params).subscribe((r) => {
+      this.items.set(r.items);
+      this.total.set(r.total);
+      this.pages.set(r.pages);
+    });
+  }
+
+  onFilterChange(): void {
+    clearTimeout(this.debounce);
+    this.debounce = setTimeout(() => { this.page.set(1); this.load(); }, 300);
+  }
+
+  prev() { if (this.page() > 1) { this.page.update(p => p - 1); this.load(); } }
+  next() { if (this.page() < this.pages()) { this.page.update(p => p + 1); this.load(); } }
+
+  exportar(): void {
+    this.svc.exportExcel(this.filtros).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pqrs-${new Date().toISOString().slice(0,10)}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.snack.open('Exportado', 'Cerrar', { duration: 1500 });
+      },
+    });
+  }
+}
