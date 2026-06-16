@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
-import { Cliente, Page } from '../models/api.models';
+import { Cliente, ClienteCargaMasivaResultado, Page } from '../models/api.models';
 
 @Injectable({ providedIn: 'root' })
 export class ClienteService {
@@ -20,4 +20,13 @@ export class ClienteService {
   create(data: Partial<Cliente>) { return this.http.post<Cliente>(`${this.api}/`, data); }
   update(id: number, data: Partial<Cliente>) { return this.http.put<Cliente>(`${this.api}/${id}`, data); }
   remove(id: number) { return this.http.delete<void>(`${this.api}/${id}`); }
+
+  importarCargaMasiva(archivo: File): Observable<ClienteCargaMasivaResultado> {
+    const form = new FormData();
+    form.append('archivo', archivo);
+    return this.http.post<ClienteCargaMasivaResultado>(
+      `${this.api}/carga-masiva`,
+      form
+    );
+  }
 }

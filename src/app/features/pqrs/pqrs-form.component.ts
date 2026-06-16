@@ -18,6 +18,7 @@ import {
   Usuario,
 } from '@app/core/models/api.models';
 import { AuthService } from '@app/core/services/auth.service';
+import { P } from '@app/core/permissions';
 import { CatalogoProductosService } from '@app/core/services/catalogo-productos.service';
 import { ClienteService } from '@app/core/services/cliente.service';
 import { PqrsService } from '@app/core/services/pqrs.service';
@@ -233,8 +234,7 @@ export class PqrsFormComponent implements OnInit {
   /** Opciones de producto por fila (clave = rowId del FormGroup). */
   protected opcionesByRowId = signal<Record<string, ProductoCatalogo[]>>({});
 
-  protected puedeAsignarVendedor = (): boolean =>
-    this.auth.hasRole('ADMINISTRADOR', 'ADMINISTRATIVO_COMERCIAL');
+  protected puedeAsignarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
 
   protected form = this.fb.nonNullable.group({
     cliente_id: [null as number | null, Validators.required],

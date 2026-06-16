@@ -1,6 +1,8 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { permissionGuard } from './core/guards/permission.guard';
 import { roleGuard } from './core/guards/role.guard';
+import { P } from './core/permissions';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -29,6 +31,14 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/clientes/clientes-list.component').then(
             (m) => m.ClientesListComponent
+          ),
+      },
+      {
+        path: 'clientes/carga-masiva',
+        canActivate: [permissionGuard([P.CLIENTES_CARGA_MASIVA])],
+        loadComponent: () =>
+          import('./features/clientes/clientes-carga-masiva.component').then(
+            (m) => m.ClientesCargaMasivaComponent
           ),
       },
       {
@@ -68,7 +78,7 @@ export const routes: Routes = [
       },
       {
         path: 'devoluciones',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'CALIDAD'])],
+        canActivate: [permissionGuard([P.DEVOLUCIONES_LISTAR])],
         loadComponent: () =>
           import('./features/devoluciones/devoluciones-list.component').then(
             (m) => m.DevolucionesListComponent
@@ -76,7 +86,7 @@ export const routes: Routes = [
       },
       {
         path: 'devoluciones/:id',
-        canActivate: [roleGuard(['ADMINISTRADOR', 'CALIDAD'])],
+        canActivate: [permissionGuard([P.DEVOLUCIONES_LISTAR])],
         loadComponent: () =>
           import('./features/devoluciones/devolucion-registro.component').then(
             (m) => m.DevolucionRegistroComponent
@@ -84,7 +94,7 @@ export const routes: Routes = [
       },
       {
         path: 'usuarios',
-        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        canActivate: [permissionGuard([P.USUARIOS_GESTIONAR])],
         loadComponent: () =>
           import('./features/usuarios/usuarios-list.component').then(
             (m) => m.UsuariosListComponent
@@ -92,7 +102,7 @@ export const routes: Routes = [
       },
       {
         path: 'configuracion',
-        canActivate: [roleGuard(['ADMINISTRADOR'])],
+        canActivate: [permissionGuard([P.CONFIG_GESTIONAR])],
         loadComponent: () =>
           import('./features/configuracion/configuracion-layout.component').then(
             (m) => m.ConfiguracionLayoutComponent
@@ -125,6 +135,14 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/configuracion/configuracion-productos-catalogo.component').then(
                 (m) => m.ConfiguracionProductosCatalogoComponent
+              ),
+          },
+          {
+            path: 'permisos',
+            canActivate: [roleGuard(['ADMINISTRADOR'])],
+            loadComponent: () =>
+              import('./features/configuracion/configuracion-permisos.component').then(
+                (m) => m.ConfiguracionPermisosComponent
               ),
           },
         ],

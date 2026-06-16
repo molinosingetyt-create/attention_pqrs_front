@@ -13,6 +13,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '@app/core/services/auth.service';
+import { P } from '@app/core/permissions';
 
 @Component({
   selector: 'app-main-layout',
@@ -62,7 +63,7 @@ import { AuthService } from '@app/core/services/auth.service';
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
           </a>
-          <a *ngIf="auth.hasRole('ADMINISTRADOR','CALIDAD')"
+          <a *ngIf="auth.can(P.DEVOLUCIONES_LISTAR)"
              routerLink="/devoluciones"
              routerLinkActive="active"
              class="nav-item"
@@ -70,7 +71,7 @@ import { AuthService } from '@app/core/services/auth.service';
             <mat-icon>assignment_return</mat-icon>
             <span>Devoluciones</span>
           </a>
-          <a *ngIf="auth.hasRole('ADMINISTRADOR')"
+          <a *ngIf="auth.can(P.USUARIOS_GESTIONAR)"
              routerLink="/usuarios"
              routerLinkActive="active"
              class="nav-item"
@@ -78,7 +79,7 @@ import { AuthService } from '@app/core/services/auth.service';
             <mat-icon>group</mat-icon>
             <span>Usuarios</span>
           </a>
-          <div *ngIf="auth.hasRole('ADMINISTRADOR')" class="nav-config-block">
+          <div *ngIf="auth.can(P.CONFIG_GESTIONAR)" class="nav-config-block">
             <button
               type="button"
               class="nav-item nav-config-parent"
@@ -120,6 +121,15 @@ import { AuthService } from '@app/core/services/auth.service';
                 (click)="onNavItemClick()">
                 <mat-icon>inventory_2</mat-icon>
                 <span>Productos</span>
+              </a>
+              <a
+                *ngIf="auth.hasRole('ADMINISTRADOR')"
+                routerLink="/configuracion/permisos"
+                routerLinkActive="active"
+                class="nav-item nav-config-child"
+                (click)="onNavItemClick()">
+                <mat-icon>admin_panel_settings</mat-icon>
+                <span>Permisos por perfil</span>
               </a>
             </div>
           </div>
@@ -525,6 +535,7 @@ import { AuthService } from '@app/core/services/auth.service';
 })
 export class MainLayoutComponent {
   protected auth = inject(AuthService);
+  protected P = P;
   private router = inject(Router);
   protected year = new Date().getFullYear();
 
@@ -541,6 +552,9 @@ export class MainLayoutComponent {
   ];
 
   constructor() {
+    if (this.auth.isAuthenticated()) {
+      this.auth.refreshSession().subscribe({ error: () => undefined });
+    }
     this.router.events
       .pipe(filter((e) => e instanceof NavigationEnd))
       .subscribe((e) => {

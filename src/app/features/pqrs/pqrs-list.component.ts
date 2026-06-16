@@ -9,6 +9,7 @@ import { PqrsService } from '@app/core/services/pqrs.service';
 import { UsuarioService } from '@app/core/services/usuario.service';
 import { AuthService } from '@app/core/services/auth.service';
 import { PQRSListItem, Usuario } from '@app/core/models/api.models';
+import { P } from '@app/core/permissions';
 
 @Component({
   selector: 'app-pqrs-list',
@@ -175,11 +176,8 @@ export class PqrsListComponent implements OnInit {
   protected vendedores = signal<Usuario[]>([]);
   protected filtros: any = { q: '', estado: '', tipo: '', fecha_desde: '', vendedor_id: '' };
 
-  protected puedeFiltrarVendedor = (): boolean =>
-    this.auth.hasRole('ADMINISTRADOR', 'ADMINISTRATIVO_COMERCIAL');
-
-  protected puedeEditarPQRS = (): boolean =>
-    this.auth.hasRole('ADMINISTRADOR');
+  protected puedeFiltrarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
+  protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
 
   ngOnInit(): void {
     if (this.puedeFiltrarVendedor()) {

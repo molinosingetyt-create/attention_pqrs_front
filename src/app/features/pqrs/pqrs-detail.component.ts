@@ -9,6 +9,7 @@ import { AuthService } from '@app/core/services/auth.service';
 import { PqrsService } from '@app/core/services/pqrs.service';
 import { UsuarioService } from '@app/core/services/usuario.service';
 import { Inconformidad, PQRSDetail, Usuario } from '@app/core/models/api.models';
+import { P } from '@app/core/permissions';
 
 @Component({
   selector: 'app-pqrs-detail',
@@ -20,8 +21,8 @@ import { Inconformidad, PQRSDetail, Usuario } from '@app/core/models/api.models'
         <mat-icon>arrow_back</mat-icon> Volver al listado
       </a>
 
-      <!-- Edición (solo administrador) -->
-      <div *ngIf="editMode() && puedeGestionarPQRS()" class="card border border-[rgba(0,102,204,0.25)]">
+      <!-- Edición PQRS (administrador / administrativo comercial) -->
+      <div *ngIf="editMode() && puedeEditarPQRS()" class="card border border-[rgba(0,102,204,0.25)]">
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h3 class="font-semibold text-gray-800">Editar / Gestionar PQRS</h3>
@@ -185,7 +186,7 @@ import { Inconformidad, PQRSDetail, Usuario } from '@app/core/models/api.models'
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-semibold">Evidencias ({{ p.evidencias.length }})</h3>
-          <label *ngIf="puedeGestionarPQRS() && !pqrsEsTerminal(p)" class="btn-secondary cursor-pointer">
+          <label *ngIf="puedeSubirEvidencia() && !pqrsEsTerminal(p)" class="btn-secondary cursor-pointer">
             <mat-icon>upload</mat-icon> Subir archivo
             <input type="file" hidden (change)="subirEvidencia($event)" />
           </label>
@@ -210,7 +211,7 @@ import { Inconformidad, PQRSDetail, Usuario } from '@app/core/models/api.models'
         <p *ngIf="pqrsEsTerminal(p)" class="text-sm text-gray-600 mb-4">
           Esta PQRS está {{ p.estado === 'CERRADA' ? 'cerrada' : 'rechazada' }}; el historial queda en solo lectura.
         </p>
-        <form *ngIf="puedeGestionarPQRS() && !pqrsEsTerminal(p)" [formGroup]="segForm" (ngSubmit)="addSeguimiento()"
+        <form *ngIf="puedeGestionarSeguimiento() && !pqrsEsTerminal(p)" [formGroup]="segForm" (ngSubmit)="addSeguimiento()"
               class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
           <select class="input" formControlName="estado">
             <option value="ABIERTA">Abierta</option>
@@ -220,10 +221,10 @@ import { Inconformidad, PQRSDetail, Usuario } from '@app/core/models/api.models'
           </select>
           <input class="input sm:col-span-1 lg:col-span-2" formControlName="descripcion"
                  placeholder="Descripción del seguimiento..." />
-          <button type="submit" class="btn-primary sm:col-span-2 lg:col-span-1">Agregar</button>
+          <button type="submit" class="btn-primary sm:col-span-2 lg:col-span-1">Agregar seguimiento</button>
         </form>
-        <p *ngIf="!puedeGestionarPQRS() && !pqrsEsTerminal(p)" class="text-sm text-gray-500 mb-4">
-          El seguimiento y la documentación adicional las gestionan administración.
+        <p *ngIf="!puedeGestionarSeguimiento() && !pqrsEsTerminal(p)" class="text-sm text-gray-500 mb-4">
+          El historial de seguimiento lo gestionan administración o administrativo comercial.
         </p>
 
         <ol class="relative timeline-line">
@@ -259,8 +260,9 @@ export class PqrsDetailComponent implements OnInit {
   protected vendedores = signal<Usuario[]>([]);
   protected inconformidades = signal<Inconformidad[]>([]);
 
-  protected puedeGestionarPQRS = (): boolean =>
-    this.auth.hasRole('ADMINISTRADOR');
+  protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
+  protected puedeGestionarSeguimiento = (): boolean => this.auth.can(P.PQRS_SEGUIMIENTO_CREAR);
+  protected puedeSubirEvidencia = (): boolean => this.auth.can(P.PQRS_EVIDENCIA_SUBIR);
 
   protected pqrsEsTerminal(p: PQRSDetail): boolean {
     return p.estado === 'CERRADA' || p.estado === 'RECHAZADA';
@@ -323,7 +325,7 @@ export class PqrsDetailComponent implements OnInit {
   }
 
   protected guardarCambios(): void {
-    if (!this.puedeGestionarPQRS()) return;
+    if (!this.puedeEditarPQRS()) return;
     const p = this.pqrs();
     if (!p || this.pqrsEsTerminal(p)) return;
 
@@ -350,7 +352,7 @@ export class PqrsDetailComponent implements OnInit {
   }
 
   addSeguimiento(): void {
-    if (!this.puedeGestionarPQRS()) return;
+    if (!this.puedeGestionarSeguimiento()) return;
     const p = this.pqrs();
     if (!p || this.pqrsEsTerminal(p)) return;
     this.svc.crearSeguimiento(p.id, this.segForm.getRawValue()).subscribe(() => {
@@ -360,7 +362,7 @@ export class PqrsDetailComponent implements OnInit {
   }
 
   subirEvidencia(e: Event): void {
-    if (!this.puedeGestionarPQRS()) return;
+    if (!this.puedeSubirEvidencia()) return;
     const p = this.pqrs();
     if (p && this.pqrsEsTerminal(p)) return;
     const input = e.target as HTMLInputElement;

@@ -8,6 +8,7 @@ import { ClienteService } from '@app/core/services/cliente.service';
 import { AuthService } from '@app/core/services/auth.service';
 import { UsuarioService } from '@app/core/services/usuario.service';
 import { Usuario } from '@app/core/models/api.models';
+import { P } from '@app/core/permissions';
 
 @Component({
   selector: 'app-cliente-form',
@@ -54,16 +55,16 @@ import { Usuario } from '@app/core/models/api.models';
           <input class="input" formControlName="direccion" />
         </div>
 
-        <div *ngIf="esAdministrador()" class="sm:col-span-2">
+        <div *ngIf="puedeAsignarVendedor()" class="sm:col-span-2">
           <label class="label">Vendedor asignado</label>
           <select class="input" formControlName="vendedor_asignado_id">
             <option [ngValue]="null">(Sin asignar)</option>
             <option *ngFor="let v of vendedores()" [ngValue]="v.id">{{ v.nombre }} · {{ v.email }}</option>
           </select>
-          <p class="text-xs text-gray-500 mt-1">Solo el administrador puede asignar o cambiar el vendedor.</p>
+          <p class="text-xs text-gray-500 mt-1">Requiere permiso de asignación de vendedor.</p>
         </div>
 
-        <div *ngIf="esAdministrador() && id()" class="sm:col-span-2 flex items-center gap-2">
+        <div *ngIf="puedeActivarCliente() && id()" class="sm:col-span-2 flex items-center gap-2">
           <input type="checkbox" id="activo" formControlName="activo" class="input-checkbox-rounded" />
           <label for="activo" class="text-sm text-gray-700">Cliente activo (desmarcar para deshabilitar)</label>
         </div>
@@ -91,7 +92,9 @@ export class ClienteFormComponent implements OnInit {
   protected saving = signal(false);
   protected vendedores = signal<Usuario[]>([]);
 
-  protected esAdministrador = (): boolean => this.auth.hasRole('ADMINISTRADOR');
+  protected puedeAsignarVendedor = (): boolean =>
+    this.auth.can(P.CLIENTES_ASIGNAR_VENDEDOR);
+  protected puedeActivarCliente = (): boolean => this.auth.can(P.CLIENTES_ACTIVAR);
 
   protected form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(120)]],
@@ -106,7 +109,7 @@ export class ClienteFormComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (this.esAdministrador()) {
+    if (this.puedeAsignarVendedor()) {
       this.usuarios.vendedores().subscribe({
         next: (list) => this.vendedores.set(list),
         error: () => this.vendedores.set([]),
@@ -143,14 +146,13 @@ export class ClienteFormComponent implements OnInit {
       if (raw[k] === '') raw[k] = null;
     });
 
-    if (!this.esAdministrador()) {
+    if (!this.puedeAsignarVendedor()) {
       delete raw['vendedor_asignado_id'];
+    } else if (raw['vendedor_asignado_id'] == null) {
+      delete raw['vendedor_asignado_id'];
+    }
+    if (!this.puedeActivarCliente() || !this.id()) {
       delete raw['activo'];
-    } else {
-      if (!this.id()) {
-        delete raw['activo'];
-        if (raw['vendedor_asignado_id'] == null) delete raw['vendedor_asignado_id'];
-      }
     }
 
     const req = this.id()

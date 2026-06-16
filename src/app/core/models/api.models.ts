@@ -27,6 +27,27 @@ export interface LoginResponse {
   token_type: string;
   expires_in: number;
   user: Usuario;
+  permisos: string[];
+}
+
+export interface SessionOut {
+  user: Usuario;
+  permisos: string[];
+}
+
+export interface PermisoCatalogo {
+  codigo: string;
+  modulo: string;
+  descripcion: string;
+}
+
+export interface RolPermisos {
+  rol: string;
+  permisos: string[];
+}
+
+export interface MatrizPermisos {
+  roles: RolPermisos[];
 }
 
 export interface Cliente {
@@ -40,6 +61,21 @@ export interface Cliente {
   ciudad?: string | null;
   activo?: boolean;
   vendedor_asignado_id?: number | null;
+}
+
+export interface FilaCargaClienteResultado {
+  fila: number;
+  nit?: string | null;
+  exito: boolean;
+  mensaje: string;
+  cliente_id?: number | null;
+}
+
+export interface ClienteCargaMasivaResultado {
+  total_filas: number;
+  creados: number;
+  errores: number;
+  filas: FilaCargaClienteResultado[];
 }
 
 export interface Area {

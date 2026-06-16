@@ -8,6 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Cliente } from '@app/core/models/api.models';
 import { ClienteService } from '@app/core/services/cliente.service';
 import { AuthService } from '@app/core/services/auth.service';
+import { P } from '@app/core/permissions';
 
 @Component({
   selector: 'app-clientes-list',
@@ -17,8 +18,15 @@ import { AuthService } from '@app/core/services/auth.service';
     <div class="space-y-4">
       <div class="page-head">
         <h2>Clientes</h2>
-        <div class="actions">
-          <a *ngIf="auth.hasRole('ADMINISTRADOR','ADMINISTRATIVO_COMERCIAL','VENDEDOR')"
+        <div class="actions flex flex-wrap gap-2">
+          <a *ngIf="auth.can(P.CLIENTES_CARGA_MASIVA)"
+             routerLink="/clientes/carga-masiva"
+             class="btn-secondary">
+            <mat-icon>upload_file</mat-icon>
+            <span class="hidden sm:inline">Cargue masivo</span>
+            <span class="sm:hidden">Masivo</span>
+          </a>
+          <a *ngIf="auth.can(P.CLIENTES_CREAR)"
              routerLink="/clientes/nuevo" class="btn-primary">
             <mat-icon>add</mat-icon>
             <span class="hidden sm:inline">Nuevo cliente</span>
@@ -60,14 +68,14 @@ import { AuthService } from '@app/core/services/auth.service';
                   <div class="inline-flex items-center gap-1.5">
                     <span *ngIf="c.activo === false"
                           class="text-xs px-2 py-0.5 rounded bg-gray-200 text-gray-700 mr-1">Inactivo</span>
-                    <a *ngIf="auth.hasRole('ADMINISTRADOR','ADMINISTRATIVO_COMERCIAL','VENDEDOR')"
+                    <a *ngIf="auth.can(P.CLIENTES_EDITAR)"
                        [routerLink]="['/clientes', c.id, 'editar']"
                        class="icon-btn icon-edit"
                        matTooltip="Editar cliente"
                        aria-label="Editar cliente">
                       <mat-icon>edit</mat-icon>
                     </a>
-                    <button *ngIf="auth.hasRole('ADMINISTRADOR')"
+                    <button *ngIf="auth.can(P.CLIENTES_ELIMINAR)"
                             (click)="remove(c)"
                             class="icon-btn icon-delete"
                             matTooltip="Eliminar cliente"
@@ -102,14 +110,14 @@ import { AuthService } from '@app/core/services/auth.service';
             </div>
             <div class="flex gap-2 mt-2 justify-end items-center flex-wrap">
               <span *ngIf="c.activo === false" class="text-xs text-gray-600">Inactivo</span>
-              <a *ngIf="auth.hasRole('ADMINISTRADOR','ADMINISTRATIVO_COMERCIAL','VENDEDOR')"
+              <a *ngIf="auth.can(P.CLIENTES_EDITAR)"
                  [routerLink]="['/clientes', c.id, 'editar']"
                  class="icon-btn icon-edit"
                  matTooltip="Editar cliente"
                  aria-label="Editar cliente">
                 <mat-icon>edit</mat-icon>
               </a>
-              <button *ngIf="auth.hasRole('ADMINISTRADOR')"
+              <button *ngIf="auth.can(P.CLIENTES_ELIMINAR)"
                       (click)="remove(c)"
                       class="icon-btn icon-delete"
                       matTooltip="Eliminar cliente"
@@ -137,6 +145,7 @@ import { AuthService } from '@app/core/services/auth.service';
 })
 export class ClientesListComponent implements OnInit {
   protected auth = inject(AuthService);
+  protected P = P;
   private svc = inject(ClienteService);
   private snack = inject(MatSnackBar);
 

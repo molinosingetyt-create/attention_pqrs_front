@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
-  filesBaseUrl: ''
+  apiUrl: 'https://back-attentionpqrs.mdalanieve.com/api',
+  filesBaseUrl: 'https://back-attentionpqrs.mdalanieve.com'
 };
