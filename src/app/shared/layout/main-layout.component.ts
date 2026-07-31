@@ -38,11 +38,11 @@ import { P } from '@app/core/permissions';
         <div class="brand">
           <span class="brand-logo-frame">
             <img
-              src="assets/logo-la-nieve.svg"
-              alt="Molinos del Atlántico · La Nieve"
+              src="assets/logo-molinos.jpeg"
+              alt="Molinos del Atlántico"
               class="brand-logo"
-              width="180"
-              height="220"
+              width="72"
+              height="48"
               decoding="async" />
           </span>
           <div class="brand-text">
@@ -104,7 +104,7 @@ import { P } from '@app/core/permissions';
                 class="nav-item nav-config-child"
                 (click)="onNavItemClick()">
                 <mat-icon>rule</mat-icon>
-                <span>Inconformidades</span>
+                <span>Motivos</span>
               </a>
               <a
                 routerLink="/configuracion/categorias-producto"
@@ -229,13 +229,13 @@ import { P } from '@app/core/permissions';
         position: relative;
       }
       .brand-logo-frame {
-        width: 54px;
-        aspect-ratio: 4 / 5;
+        width: 64px;
+        aspect-ratio: 3 / 2;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.38rem;
-        border-radius: 50% / 42%;
+        padding: 0.3rem;
+        border-radius: 10px;
         background: #ffffff;
         border: 1px solid rgba(252, 237, 217, 0.35);
         box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);

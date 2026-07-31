@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -9,7 +10,7 @@ import { DashboardResponse } from '@app/core/models/api.models';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule, MatProgressSpinnerModule, DatePipe],
+  imports: [CommonModule, FormsModule, RouterLink, MatIconModule, MatProgressSpinnerModule, DatePipe],
   template: `
     <div *ngIf="loading()" class="flex justify-center p-10">
       <mat-spinner diameter="40"></mat-spinner>
@@ -60,6 +61,77 @@ import { DashboardResponse } from '@app/core/models/api.models';
             <mat-icon style="color:#DD0A1E">block</mat-icon>
           </div>
         </div>
+      </div>
+
+      <!-- Productos por categoría -->
+      <div class="card">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold text-gray-800">Productos por categoría</h3>
+            <mat-icon class="text-gray-400">category</mat-icon>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:w-auto">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Fecha inicio</label>
+              <input
+                type="date"
+                [(ngModel)]="fechaInicio"
+                (ngModelChange)="onCategoryDateChange()"
+                class="input"
+              />
+            </div>
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Fecha fin</label>
+              <input
+                type="date"
+                [(ngModel)]="fechaFin"
+                (ngModelChange)="onCategoryDateChange()"
+                class="input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="categoryLoading()" class="flex justify-center py-8">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+
+        <div *ngIf="!categoryLoading() && (d.por_categoria_producto?.length || 0) > 0; else noCategoryData" class="space-y-6">
+          <div *ngFor="let cat of categoriasAgrupadas(d); let ci = index">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span
+                  [style.background]="areaColor(ci)"
+                  style="width:12px;height:12px;border-radius:9999px;display:inline-block;"></span>
+                <span class="font-semibold text-gray-800">{{ cat.categoria }}</span>
+              </div>
+              <span class="text-sm text-gray-500 tabular-nums">{{ cat.total }} líneas</span>
+            </div>
+            <div class="space-y-2 pl-4 border-l-2" [style.border-color]="areaColor(ci)">
+              <div *ngFor="let p of cat.productos">
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="font-medium text-gray-700 truncate pr-4">{{ p.producto }}</span>
+                  <span class="text-gray-500 tabular-nums flex-shrink-0">{{ p.cantidad }}</span>
+                </div>
+                <div class="w-full bg-gray-100 rounded-full h-1.5">
+                  <div
+                    class="h-1.5 rounded-full transition-all"
+                    [style.background]="areaColor(ci)"
+                    [style.width.%]="(p.cantidad / (cat.total || 1)) * 100">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noCategoryData>
+          <p *ngIf="!categoryLoading()" class="text-gray-400 text-sm">
+            {{ fechaInicio || fechaFin
+              ? 'No hay productos registrados en PQRS para el rango seleccionado.'
+              : 'Aún no hay productos registrados en PQRS.' }}
+          </p>
+        </ng-template>
       </div>
 
       <!-- Distribución por tipo -->
@@ -238,17 +310,73 @@ export class DashboardComponent implements OnInit {
   private svc = inject(PqrsService);
   protected data = signal<DashboardResponse | null>(null);
   protected loading = signal(true);
+  protected categoryLoading = signal(false);
+  protected fechaInicio = '';
+  protected fechaFin = '';
 
   ngOnInit(): void {
-    this.svc.dashboard().subscribe({
-      next: (r) => { this.data.set(r); this.loading.set(false); },
-      error: () => this.loading.set(false),
+    this.loadDashboard();
+  }
+
+  protected onCategoryDateChange(): void {
+    this.loadCategoryData();
+  }
+
+  private loadDashboard(): void {
+    this.loading.set(true);
+    this.svc.dashboard(this.categoryFilters()).subscribe({
+      next: (r) => {
+        this.data.set(r);
+        this.loading.set(false);
+        this.categoryLoading.set(false);
+      },
+      error: () => {
+        this.loading.set(false);
+        this.categoryLoading.set(false);
+      },
     });
+  }
+
+  private loadCategoryData(): void {
+    const current = this.data();
+    if (!current) return;
+
+    this.categoryLoading.set(true);
+    this.svc.dashboard(this.categoryFilters()).subscribe({
+      next: (r) => {
+        this.data.set({ ...current, por_categoria_producto: r.por_categoria_producto });
+        this.categoryLoading.set(false);
+      },
+      error: () => this.categoryLoading.set(false),
+    });
+  }
+
+  private categoryFilters() {
+    return {
+      fecha_inicio: this.fechaInicio || undefined,
+      fecha_fin: this.fechaFin || undefined,
+    };
   }
 
   protected areasSorted(d: DashboardResponse) {
     const list = (d.por_area || []).slice();
     return list.sort((a, b) => (b.cantidad || 0) - (a.cantidad || 0));
+  }
+
+  protected categoriasAgrupadas(d: DashboardResponse) {
+    const map = new Map<string, { producto: string; cantidad: number }[]>();
+    for (const row of d.por_categoria_producto || []) {
+      const list = map.get(row.categoria) || [];
+      list.push({ producto: row.producto, cantidad: row.cantidad });
+      map.set(row.categoria, list);
+    }
+    return Array.from(map.entries())
+      .map(([categoria, productos]) => ({
+        categoria,
+        productos: productos.sort((a, b) => b.cantidad - a.cantidad),
+        total: productos.reduce((s, p) => s + p.cantidad, 0),
+      }))
+      .sort((a, b) => b.total - a.total);
   }
 
   protected percent(part: number, total: number): string {

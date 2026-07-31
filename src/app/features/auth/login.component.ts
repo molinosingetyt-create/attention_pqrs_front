@@ -23,10 +23,10 @@ import { AuthService } from '@app/core/services/auth.service';
           <div class="brand-logo-frame">
             <img
               class="brand-logo"
-              src="assets/logo-la-nieve.svg"
-              width="180"
-              height="220"
-              alt="Molinos del Atlántico · La Nieve"
+              src="assets/logo-molinos.jpeg"
+              width="200"
+              height="140"
+              alt="Molinos del Atlántico"
               decoding="async" />
           </div>
           <p class="brand-title">Gestión de PQRS</p>
@@ -137,21 +137,24 @@ import { AuthService } from '@app/core/services/auth.service';
         padding: 0.5rem 1rem;
       }
       .brand-logo-frame {
-        width: min(70vw, 240px);
+        width: min(80vw, 320px);
         aspect-ratio: 4 / 5;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 1.4rem;
+        padding: 12% 14%;
         background: #ffffff;
         border-radius: 50% / 42%;
         box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
         border: 1px solid rgba(252, 237, 217, 0.35);
+        overflow: hidden;
+        box-sizing: border-box;
       }
       .brand-logo {
         width: 100%;
         height: 100%;
         object-fit: contain;
+        object-position: center;
         display: block;
       }
       .brand-title {
@@ -323,7 +326,8 @@ import { AuthService } from '@app/core/services/auth.service';
       @media (max-width: 720px) {
         .login-shell { flex-direction: column; gap: 1.75rem; }
         .brand-aside { flex-basis: auto; padding-top: 0.25rem; }
-        .brand-logo-frame { width: 165px; padding: 0.9rem; }
+        .brand-logo-frame { width: 240px; padding: 12% 14%; }
+        .brand-logo { width: 100%; height: 100%; }
         .footer-note { text-align: center; }
       }
     `,

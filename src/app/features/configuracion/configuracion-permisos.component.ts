@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -17,7 +18,7 @@ const ROLES: Rol[] = [
 @Component({
   selector: 'app-configuracion-permisos',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [CommonModule, FormsModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="card space-y-4">
       <div>
@@ -36,8 +37,11 @@ const ROLES: Rol[] = [
         <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
           <div class="flex-1 min-w-[200px]">
             <label class="label">Perfil (rol)</label>
-            <select class="input" [value]="rolSeleccionado()" (change)="onRolChange($event)">
-              <option *ngFor="let r of roles" [value]="r">{{ etiquetaRol(r) }}</option>
+            <select
+              class="input"
+              [ngModel]="rolSeleccionado()"
+              (ngModelChange)="onRolSelect($event)">
+              <option *ngFor="let r of roles" [ngValue]="r">{{ etiquetaRol(r) }}</option>
             </select>
           </div>
           <button type="button" class="btn-primary" (click)="guardar()" [disabled]="saving()">
@@ -55,7 +59,7 @@ const ROLES: Rol[] = [
             <h3 class="font-medium text-gray-800 mb-2 capitalize">{{ grupo.modulo }}</h3>
             <div class="grid sm:grid-cols-2 gap-2">
               <label
-                *ngFor="let p of grupo.items"
+                *ngFor="let p of grupo.items; trackBy: trackPermiso"
                 class="flex items-start gap-2 text-sm cursor-pointer"
                 [class.opacity-50]="esSoloAdmin(p.codigo)">
                 <input
@@ -133,11 +137,13 @@ export class ConfiguracionPermisosComponent implements OnInit {
     );
   }
 
-  onRolChange(ev: Event): void {
-    const rol = (ev.target as HTMLSelectElement).value as Rol;
+  onRolSelect(rol: Rol): void {
     this.rolSeleccionado.set(rol);
     this.cargarSeleccion(rol);
   }
+
+  protected trackPermiso = (_index: number, p: PermisoCatalogo): string =>
+    `${this.rolSeleccionado()}:${p.codigo}`;
 
   toggle(codigo: string, ev: Event): void {
     const checked = (ev.target as HTMLInputElement).checked;

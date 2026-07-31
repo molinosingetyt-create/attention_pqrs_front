@@ -29,6 +29,9 @@ import { P } from '@app/core/permissions';
         <div>
           <label class="label">Nombre *</label>
           <input class="input" formControlName="nombre" />
+          <p *ngIf="form.get('nombre')?.touched && form.get('nombre')?.invalid" class="text-xs text-danger mt-1">
+            El nombre es obligatorio.
+          </p>
         </div>
         <div>
           <label class="label">Apellidos</label>
@@ -37,22 +40,37 @@ import { P } from '@app/core/permissions';
         <div>
           <label class="label">NIT *</label>
           <input class="input" formControlName="nit" [attr.disabled]="id() ? true : null" />
+          <p *ngIf="form.get('nit')?.touched && form.get('nit')?.invalid" class="text-xs text-danger mt-1">
+            El NIT es obligatorio.
+          </p>
         </div>
         <div>
-          <label class="label">Ciudad</label>
+          <label class="label">Ciudad *</label>
           <input class="input" formControlName="ciudad" />
+          <p *ngIf="form.get('ciudad')?.touched && form.get('ciudad')?.invalid" class="text-xs text-danger mt-1">
+            La ciudad es obligatoria.
+          </p>
         </div>
         <div>
-          <label class="label">Teléfono</label>
+          <label class="label">Teléfono *</label>
           <input class="input" formControlName="telefono" />
+          <p *ngIf="form.get('telefono')?.touched && form.get('telefono')?.invalid" class="text-xs text-danger mt-1">
+            El teléfono es obligatorio.
+          </p>
         </div>
         <div>
-          <label class="label">Correo</label>
+          <label class="label">Correo *</label>
           <input type="email" class="input" formControlName="correo" />
+          <p *ngIf="form.get('correo')?.touched && form.get('correo')?.invalid" class="text-xs text-danger mt-1">
+            Ingresa un correo válido.
+          </p>
         </div>
         <div class="sm:col-span-2">
-          <label class="label">Dirección</label>
+          <label class="label">Dirección *</label>
           <input class="input" formControlName="direccion" />
+          <p *ngIf="form.get('direccion')?.touched && form.get('direccion')?.invalid" class="text-xs text-danger mt-1">
+            La dirección es obligatoria.
+          </p>
         </div>
 
         <div *ngIf="puedeAsignarVendedor()" class="sm:col-span-2">
@@ -61,7 +79,6 @@ import { P } from '@app/core/permissions';
             <option [ngValue]="null">(Sin asignar)</option>
             <option *ngFor="let v of vendedores()" [ngValue]="v.id">{{ v.nombre }} · {{ v.email }}</option>
           </select>
-          <p class="text-xs text-gray-500 mt-1">Requiere permiso de asignación de vendedor.</p>
         </div>
 
         <div *ngIf="puedeActivarCliente() && id()" class="sm:col-span-2 flex items-center gap-2">
@@ -98,12 +115,12 @@ export class ClienteFormComponent implements OnInit {
 
   protected form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(120)]],
-    apellidos: [''],
+    apellidos: ['', [Validators.maxLength(120)]],
     nit: ['', [Validators.required, Validators.maxLength(40)]],
-    direccion: [''],
-    telefono: [''],
-    correo: [''],
-    ciudad: [''],
+    direccion: ['', [Validators.required, Validators.maxLength(200)]],
+    telefono: ['', [Validators.required, Validators.maxLength(40)]],
+    correo: ['', [Validators.required, Validators.email, Validators.maxLength(180)]],
+    ciudad: ['', [Validators.required, Validators.maxLength(100)]],
     vendedor_asignado_id: [null as number | null],
     activo: [true],
   });
@@ -139,16 +156,20 @@ export class ClienteFormComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
     this.saving.set(true);
     const raw: Record<string, unknown> = { ...this.form.getRawValue() };
     Object.keys(raw).forEach((k) => {
+      if (typeof raw[k] === 'string') raw[k] = (raw[k] as string).trim();
       if (raw[k] === '') raw[k] = null;
     });
 
     if (!this.puedeAsignarVendedor()) {
       delete raw['vendedor_asignado_id'];
-    } else if (raw['vendedor_asignado_id'] == null) {
+    } else if (!this.id() && raw['vendedor_asignado_id'] == null) {
       delete raw['vendedor_asignado_id'];
     }
     if (!this.puedeActivarCliente() || !this.id()) {

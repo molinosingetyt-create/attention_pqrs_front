@@ -18,7 +18,7 @@ import { PqrsService } from '@app/core/services/pqrs.service';
         <div class="actions"></div>
       </div>
       <p class="text-sm text-gray-600 max-w-3xl">
-        PQRS cerradas con inconformidad: pendientes de radicar en el formulario de devoluciones.
+        PQRS cerradas con motivo: pendientes de radicar en el formulario de devoluciones.
         Administración ve todas las áreas; calidad solo las del área CALIDAD.
       </p>
 
@@ -40,7 +40,7 @@ import { PqrsService } from '@app/core/services/pqrs.service';
                   <th>Código devolución</th>
                   <th>Cliente</th>
                   <th>Área</th>
-                  <th>Inconformidad</th>
+                  <th>Motivo</th>
                   <th>Registro</th>
                   <th>Cierre PQRS</th>
                   <th class="text-right">Acciones</th>

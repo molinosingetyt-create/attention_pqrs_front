@@ -28,8 +28,11 @@ import { descargarPlantillaClientesExcel } from '@app/core/utils/plantilla-clien
 
       <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Cargue masivo de clientes</h2>
       <p class="text-sm text-gray-600">
-        Solo administrador. Cada fila debe incluir el nombre del vendedor
-        <strong>exactamente</strong> como está registrado en el sistema (hoja «Vendedores» de la plantilla).
+        Solo administrador. Cada fila debe incluir los datos obligatorios del cliente.
+        Si el <strong>NIT</strong> ya existe, se <strong>actualizan</strong> los datos; si no, se crea el cliente.
+        El vendedor es <strong>opcional</strong>; si lo indica, el nombre debe coincidir
+        <strong>exactamente</strong> con el registrado en el sistema (hoja «Vendedores» de la plantilla).
+        En actualizaciones, si deja el vendedor vacío se conserva el asignado actual.
       </p>
 
       <div class="card space-y-4">
@@ -68,6 +71,7 @@ import { descargarPlantillaClientesExcel } from '@app/core/utils/plantilla-clien
         <div class="flex flex-wrap gap-4 text-sm">
           <span>Filas procesadas: <strong>{{ r.total_filas }}</strong></span>
           <span class="text-green-700">Creados: <strong>{{ r.creados }}</strong></span>
+          <span class="text-blue-700">Actualizados: <strong>{{ r.actualizados }}</strong></span>
           <span class="text-red-700">Errores: <strong>{{ r.errores }}</strong></span>
         </div>
 
@@ -157,8 +161,8 @@ export class ClientesCargaMasivaComponent {
         this.uploading.set(false);
         const msg =
           res.errores === 0
-            ? `Se importaron ${res.creados} clientes correctamente.`
-            : `Importación finalizada: ${res.creados} creados, ${res.errores} con error.`;
+            ? `Importación correcta: ${res.creados} creados, ${res.actualizados} actualizados.`
+            : `Importación finalizada: ${res.creados} creados, ${res.actualizados} actualizados, ${res.errores} con error.`;
         this.snack.open(msg, 'Cerrar', { duration: 5000 });
       },
       error: () => {

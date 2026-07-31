@@ -76,7 +76,7 @@ function causaDesdeInconformidad(d: DevolucionDetalle): string {
           <strong>{{ d.cliente_nombre }} {{ d.cliente_apellidos }}</strong>
         </p>
         <p class="text-sm text-gray-600">
-          Inconformidad: {{ d.inconformidad_nombre }}
+          Motivo: {{ d.inconformidad_nombre }}
           <span *ngIf="d.inconformidad_descripcion" class="text-gray-500">
             ({{ d.inconformidad_descripcion }})
           </span>
@@ -172,7 +172,7 @@ function causaDesdeInconformidad(d: DevolucionDetalle): string {
                   <input pInputText formControlName="producto" class="w-full" readonly />
                 </div>
                 <div class="field">
-                  <label class="block text-xs font-medium mb-1">Inconformidad *</label>
+                  <label class="block text-xs font-medium mb-1">Motivo *</label>
                   <input pInputText formControlName="causa" class="w-full" readonly />
                 </div>
                 <div class="field">

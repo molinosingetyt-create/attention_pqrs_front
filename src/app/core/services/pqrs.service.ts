@@ -3,6 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import {
+  AnalisisResponsabilidad,
+  CalificacionAtencion,
   DashboardResponse,
   DevolucionDetalle,
   DevolucionPendienteListItem,
@@ -13,6 +15,7 @@ import {
   PQRSDetail,
   PQRSListItem,
   ProductoPQRS,
+  SatisfaccionCliente,
   Seguimiento,
 } from '../models/api.models';
 
@@ -26,6 +29,11 @@ export interface ListaPQRSFiltros {
   fecha_hasta?: string;
   page?: number;
   size?: number;
+}
+
+export interface DashboardFiltros {
+  fecha_inicio?: string;
+  fecha_fin?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -64,11 +72,42 @@ export class PqrsService {
     );
   }
 
-  subirEvidencia(id: number, file: File, cargaInicial = false) {
+  updateProducto(
+    pqrsId: number,
+    productoId: number,
+    data: {
+      producto_catalogo_id?: number | null;
+      cantidad?: number;
+      numero_factura?: string | null;
+      lote?: string | null;
+      comentario?: string | null;
+    }
+  ) {
+    return this.http.put<ProductoPQRS>(
+      `${this.api}/pqrs/${pqrsId}/productos/${productoId}`,
+      data
+    );
+  }
+
+  deleteProducto(pqrsId: number, productoId: number) {
+    return this.http.delete<void>(`${this.api}/pqrs/${pqrsId}/productos/${productoId}`);
+  }
+
+  subirEvidencia(
+    id: number,
+    file: File,
+    opts: {
+      productoPqrsId: number;
+      tipo: 'NO_CONFORMIDAD' | 'FOTO_LOTE';
+      cargaInicial?: boolean;
+    }
+  ) {
     const form = new FormData();
     form.append('file', file);
-    let params = new HttpParams();
-    if (cargaInicial) params = params.set('carga_inicial', 'true');
+    let params = new HttpParams()
+      .set('producto_pqrs_id', String(opts.productoPqrsId))
+      .set('tipo', opts.tipo);
+    if (opts.cargaInicial) params = params.set('carga_inicial', 'true');
     return this.http.post<Evidencia>(
       `${this.api}/pqrs/${id}/evidencias`,
       form,
@@ -80,6 +119,26 @@ export class PqrsService {
     return this.http.post<{ ok: boolean }>(
       `${this.api}/pqrs/${id}/notificar-calidad`,
       {}
+    );
+  }
+
+  guardarAnalisisResponsabilidad(
+    id: number,
+    data: { procedente: boolean; comentario: string }
+  ) {
+    return this.http.put<AnalisisResponsabilidad>(
+      `${this.api}/pqrs/${id}/analisis-responsabilidad`,
+      data
+    );
+  }
+
+  guardarSatisfaccionCliente(
+    id: number,
+    data: { atencion_oportunidad: CalificacionAtencion; expectativa_cumplida: boolean }
+  ) {
+    return this.http.put<SatisfaccionCliente>(
+      `${this.api}/pqrs/${id}/satisfaccion-cliente`,
+      data
     );
   }
 
@@ -115,8 +174,12 @@ export class PqrsService {
     return this.http.get<Inconformidad[]>(`${this.api}/inconformidades/`);
   }
 
-  dashboard() {
-    return this.http.get<DashboardResponse>(`${this.api}/dashboard/`);
+  dashboard(f: DashboardFiltros = {}) {
+    let params = new HttpParams();
+    Object.entries(f).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') params = params.set(k, String(v));
+    });
+    return this.http.get<DashboardResponse>(`${this.api}/dashboard/`, { params });
   }
 
   exportExcel(f: ListaPQRSFiltros = {}) {
@@ -126,6 +189,12 @@ export class PqrsService {
     });
     return this.http.get(`${this.api}/pqrs/export`, {
       params,
+      responseType: 'blob',
+    });
+  }
+
+  descargarPdf(id: number) {
+    return this.http.get(`${this.api}/pqrs/${id}/pdf`, {
       responseType: 'blob',
     });
   }

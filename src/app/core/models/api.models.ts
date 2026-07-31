@@ -12,6 +12,7 @@ export type TipoPQRS =
   | 'OTRO';
 
 export type EstadoPQRS = 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'RECHAZADA';
+export type EstadoAreaResponsable = 'NO GESTIONADO' | 'PROCEDENTE' | 'NO PROCEDENTE';
 
 export interface Usuario {
   id: number;
@@ -74,6 +75,7 @@ export interface FilaCargaClienteResultado {
 export interface ClienteCargaMasivaResultado {
   total_filas: number;
   creados: number;
+  actualizados: number;
   errores: number;
   filas: FilaCargaClienteResultado[];
 }
@@ -108,6 +110,13 @@ export interface ProductoCatalogo {
   orden: number;
 }
 
+export type TipoEvidencia = 'NO_CONFORMIDAD' | 'FOTO_LOTE';
+
+export const TIPOS_EVIDENCIA_LABELS: Record<TipoEvidencia, string> = {
+  NO_CONFORMIDAD: 'Por no conformidad',
+  FOTO_LOTE: 'Foto del lote',
+};
+
 export interface ProductoPQRS {
   id?: number;
   nombre_producto: string;
@@ -116,11 +125,16 @@ export interface ProductoPQRS {
   numero_factura?: string | null;
   lote?: string | null;
   comentario?: string | null;
+  categoria_id?: number | null;
   categoria_nombre?: string | null;
+  evidencias?: Evidencia[];
 }
 
 export interface Evidencia {
   id: number;
+  producto_pqrs_id?: number | null;
+  tipo?: TipoEvidencia | null;
+  titulo?: string | null;
   archivo_url: string;
   nombre_original?: string | null;
   content_type?: string | null;
@@ -134,6 +148,33 @@ export interface Seguimiento {
   usuario_id?: number | null;
   usuario_nombre?: string | null;
   fecha: string;
+}
+
+export interface AnalisisResponsabilidad {
+  id: number;
+  procedente: boolean;
+  comentario: string;
+  usuario_id?: number | null;
+  usuario_nombre?: string | null;
+  fecha_actualizacion: string;
+}
+
+export type CalificacionAtencion = 'EXCELENTE' | 'BUENA' | 'REGULAR' | 'MALA';
+
+export const CALIFICACION_ATENCION_LABELS: Record<CalificacionAtencion, string> = {
+  EXCELENTE: 'Excelente',
+  BUENA: 'Buena',
+  REGULAR: 'Regular',
+  MALA: 'Mala',
+};
+
+export interface SatisfaccionCliente {
+  id: number;
+  atencion_oportunidad: CalificacionAtencion;
+  expectativa_cumplida: boolean;
+  usuario_id?: number | null;
+  usuario_nombre?: string | null;
+  fecha_actualizacion: string;
 }
 
 export interface DevolucionPendienteListItem {
@@ -239,6 +280,7 @@ export interface PQRSListItem {
   vendedor_nombre?: string | null;
   area_codigo?: string | null;
   area_nombre?: string | null;
+  estado_area_responsable: EstadoAreaResponsable;
   numero_factura?: string | null;
   fecha_creacion: string;
   fecha_cierre?: string | null;
@@ -260,6 +302,8 @@ export interface PQRSDetail {
   productos: ProductoPQRS[];
   evidencias: Evidencia[];
   seguimientos: Seguimiento[];
+  analisis_responsabilidad?: AnalisisResponsabilidad | null;
+  satisfaccion_cliente?: SatisfaccionCliente | null;
 }
 
 export interface Page<T> {
@@ -284,6 +328,7 @@ export interface DashboardResponse {
   por_estado: { tipo: string; cantidad: number }[];
   por_area: { area_codigo: string; area_nombre: string; cantidad: number }[];
   por_mes: { mes: string; cantidad: number }[]; // YYYY-MM
+  por_categoria_producto: { categoria: string; producto: string; cantidad: number }[];
   recientes: {
     id: number;
     radicado: string;

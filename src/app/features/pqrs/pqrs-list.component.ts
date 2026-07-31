@@ -72,6 +72,7 @@ import { P } from '@app/core/permissions';
                 <th>Cliente</th>
                 <th>Vendedor</th>
                 <th>Área responsable</th>
+                <th matTooltip="Estado del área responsable">Estado área resp.</th>
                 <th>Factura</th>
                 <th>Estado</th>
                 <th>Fecha</th>
@@ -85,6 +86,14 @@ import { P } from '@app/core/permissions';
                 <td>{{ p.cliente_nombre }}</td>
                 <td>{{ p.vendedor_nombre || '—' }}</td>
                 <td>{{ p.area_nombre || '—' }}</td>
+                <td>
+                  <span class="badge"
+                        [class.badge-pending]="p.estado_area_responsable === 'NO GESTIONADO'"
+                        [class.badge-closed]="p.estado_area_responsable === 'PROCEDENTE'"
+                        [class.badge-rejected]="p.estado_area_responsable === 'NO PROCEDENTE'">
+                    {{ p.estado_area_responsable }}
+                  </span>
+                </td>
                 <td>{{ p.numero_factura || '—' }}</td>
                 <td>
                   <span class="badge"
@@ -106,6 +115,13 @@ import { P } from '@app/core/permissions';
                        aria-label="Editar / Gestionar">
                       <mat-icon>edit</mat-icon>
                     </a>
+                    <button type="button"
+                            class="icon-btn icon-view"
+                            matTooltip="Descargar documentos PDF"
+                            aria-label="Descargar PDF PQRS"
+                            (click)="descargarPdf(p.id)">
+                      <mat-icon>picture_as_pdf</mat-icon>
+                    </button>
                     <a [routerLink]="['/pqrs', p.id]"
                        class="icon-btn icon-view"
                        matTooltip="Ver detalle"
@@ -116,7 +132,7 @@ import { P } from '@app/core/permissions';
                 </td>
               </tr>
               <tr *ngIf="!items().length">
-                <td colspan="9" class="py-6 text-center text-gray-400">Sin resultados.</td>
+                <td colspan="10" class="py-6 text-center text-gray-400">Sin resultados.</td>
               </tr>
             </tbody>
           </table>
@@ -139,6 +155,7 @@ import { P } from '@app/core/permissions';
             <div class="text-sm text-gray-700 truncate">{{ p.cliente_nombre }}</div>
             <div class="text-xs text-gray-500 mt-1">
               Área responsable: {{ p.area_nombre || '—' }}
+              · {{ p.estado_area_responsable }}
             </div>
             <div class="text-xs text-gray-500 mt-1 flex items-center justify-between">
               <span>Factura: {{ p.numero_factura || '—' }}</span>
@@ -217,6 +234,22 @@ export class PqrsListComponent implements OnInit {
         a.click();
         URL.revokeObjectURL(url);
         this.snack.open('Exportado', 'Cerrar', { duration: 1500 });
+      },
+    });
+  }
+
+  descargarPdf(id: number): void {
+    this.svc.descargarPdf(id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pqrs-${id}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.snack.open('No se pudo generar el PDF', 'Cerrar', { duration: 3000 });
       },
     });
   }

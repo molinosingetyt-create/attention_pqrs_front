@@ -13,7 +13,7 @@ import { ConfiguracionService } from '@app/core/services/configuracion.service';
   imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, MatTooltipModule],
   template: `
     <div class="card space-y-4">
-      <h2 class="text-lg font-semibold">Inconformidades</h2>
+      <h2 class="text-lg font-semibold">Motivos</h2>
       <form [formGroup]="formInc" (ngSubmit)="crearInc()" class="space-y-3">
         <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2 items-end">
           <div>
@@ -58,7 +58,7 @@ import { ConfiguracionService } from '@app/core/services/configuracion.service';
                       class="icon-btn icon-edit"
                       (click)="startEditInc(i)"
                       matTooltip="Editar"
-                      aria-label="Editar inconformidad">
+                      aria-label="Editar motivo">
                       <mat-icon>edit</mat-icon>
                     </button>
                     <button
@@ -74,7 +74,7 @@ import { ConfiguracionService } from '@app/core/services/configuracion.service';
                       class="icon-btn icon-delete"
                       (click)="borrarInc(i)"
                       matTooltip="Eliminar"
-                      aria-label="Eliminar inconformidad">
+                      aria-label="Eliminar motivo">
                       <mat-icon>delete</mat-icon>
                     </button>
                   </div>
@@ -155,7 +155,7 @@ export class ConfiguracionInconformidadesComponent implements OnInit {
   loadInc(): void {
     this.api.listarInconformidades().subscribe({
       next: (r) => this.inconformidades.set(r),
-      error: () => this.snack.open('No se pudieron cargar inconformidades', 'Cerrar'),
+      error: () => this.snack.open('No se pudieron cargar motivos', 'Cerrar'),
     });
   }
 
@@ -171,7 +171,7 @@ export class ConfiguracionInconformidadesComponent implements OnInit {
         next: () => {
           this.formInc.patchValue({ nombre: '', descripcion: '' });
           this.loadInc();
-          this.snack.open('Inconformidad creada', 'Cerrar', { duration: 2000 });
+          this.snack.open('Motivo creado', 'Cerrar', { duration: 2000 });
         },
         error: () => this.snack.open('Error al crear', 'Cerrar'),
       });
@@ -215,7 +215,7 @@ export class ConfiguracionInconformidadesComponent implements OnInit {
   }
 
   borrarInc(i: Inconformidad): void {
-    if (!confirm(`¿Eliminar inconformidad "${i.nombre}"?`)) return;
+    if (!confirm(`¿Eliminar motivo "${i.nombre}"?`)) return;
     this.api.eliminarInconformidad(i.id).subscribe({
       next: () => {
         this.loadInc();

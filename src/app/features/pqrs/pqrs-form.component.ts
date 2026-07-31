@@ -15,6 +15,10 @@ import {
   Cliente,
   Inconformidad,
   ProductoCatalogo,
+  PQRSDetail,
+  TIPOS_EVIDENCIA_LABELS,
+  TipoEvidencia,
+  TipoPQRS,
   Usuario,
 } from '@app/core/models/api.models';
 import { AuthService } from '@app/core/services/auth.service';
@@ -23,6 +27,13 @@ import { CatalogoProductosService } from '@app/core/services/catalogo-productos.
 import { ClienteService } from '@app/core/services/cliente.service';
 import { PqrsService } from '@app/core/services/pqrs.service';
 import { UsuarioService } from '@app/core/services/usuario.service';
+
+/** Tipos donde producto y motivo son opcionales. */
+const TIPOS_PRODUCTO_MOTIVO_OPCIONALES: ReadonlySet<TipoPQRS> = new Set([
+  'QUEJA',
+  'SUGERENCIA',
+  'OTRO',
+]);
 
 @Component({
   selector: 'app-pqrs-form',
@@ -72,7 +83,7 @@ import { UsuarioService } from '@app/core/services/usuario.service';
           </div>
 
           <div>
-            <label class="label">Inconformidad *</label>
+            <label class="label">Motivo{{ motivoObligatorio() ? ' *' : '' }}</label>
             <select class="input" formControlName="inconformidad_id">
               <option [ngValue]="null">— Seleccione —</option>
               <option
@@ -83,7 +94,10 @@ import { UsuarioService } from '@app/core/services/usuario.service';
               </option>
             </select>
             <p *ngIf="form.get('inconformidad_id')?.touched && form.get('inconformidad_id')?.invalid"
-               class="text-xs text-danger mt-1">Selecciona una inconformidad.</p>
+               class="text-xs text-danger mt-1">Selecciona un motivo.</p>
+            <p *ngIf="!motivoObligatorio()" class="text-xs text-gray-500 mt-1">
+              Opcional para Queja, Sugerencia y Otro.
+            </p>
             <p
               *ngIf="inconformidadSeleccionada()?.descripcion as desc"
               class="text-xs text-gray-500 mt-1 leading-snug max-w-prose">
@@ -115,13 +129,18 @@ import { UsuarioService } from '@app/core/services/usuario.service';
         <!-- Productos: categoría → producto del catálogo -->
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="label mb-0">Productos</label>
+            <label class="label mb-0">Productos{{ productosObligatorios() ? ' *' : '' }}</label>
             <button type="button" class="btn-secondary" (click)="addProducto()">
               <mat-icon>add</mat-icon> Agregar producto
             </button>
           </div>
           <p class="text-xs text-gray-500 mb-2">
-            Elige el producto y registra allí su factura, lote y comentario.
+            <ng-container *ngIf="productosObligatorios(); else productosOpcionalesHint">
+              Elige el producto y registra allí su factura, lote y comentario.
+            </ng-container>
+            <ng-template #productosOpcionalesHint>
+              Opcional para Queja, Sugerencia y Otro. Si agregas productos, factura, lote y fotos son obligatorios.
+            </ng-template>
           </p>
           <div formArrayName="productos" class="space-y-3">
             <div *ngFor="let ctrl of productos.controls; let i = index"
@@ -161,6 +180,28 @@ import { UsuarioService } from '@app/core/services/usuario.service';
                   formControlName="comentario"
                   placeholder="Detalle asociado a este producto" />
               </div>
+              <div class="xl:col-span-6">
+                <label class="label text-xs">{{ TIPOS_EVIDENCIA_LABELS.NO_CONFORMIDAD }} *</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="input-file-pqrs text-sm"
+                  (change)="onProductPhoto(i, 'NO_CONFORMIDAD', $event)" />
+                <p *ngIf="fotoProducto(i, 'NO_CONFORMIDAD') as f" class="text-xs text-gray-500 mt-1 truncate">
+                  {{ f.name }}
+                </p>
+              </div>
+              <div class="xl:col-span-6">
+                <label class="label text-xs">{{ TIPOS_EVIDENCIA_LABELS.FOTO_LOTE }} *</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="input-file-pqrs text-sm"
+                  (change)="onProductPhoto(i, 'FOTO_LOTE', $event)" />
+                <p *ngIf="fotoProducto(i, 'FOTO_LOTE') as f" class="text-xs text-gray-500 mt-1 truncate">
+                  {{ f.name }}
+                </p>
+              </div>
               <div class="xl:col-span-12 flex justify-end">
                 <button type="button" class="btn-text-danger"
                         aria-label="Eliminar producto"
@@ -172,25 +213,10 @@ import { UsuarioService } from '@app/core/services/usuario.service';
             <p *ngIf="!productos.length" class="text-xs text-gray-400">
               Sin productos agregados.
             </p>
+            <p *ngIf="submitted() && !productosFotosCompletas()" class="text-xs text-danger mt-2">
+              Cada producto debe tener las 2 fotos obligatorias: por no conformidad y foto del lote.
+            </p>
           </div>
-        </div>
-
-        <!-- Evidencias -->
-        <div>
-          <label class="label">Evidencias (archivos) *</label>
-          <input type="file" multiple (change)="onFileChange($event)" class="input-file-pqrs" />
-          <p class="text-xs text-gray-500 mt-1">
-            Sugerencia: sube fotos del rotulado donde se vea el lote y fotos claras del problema reportado.
-          </p>
-          <ul class="mt-2 text-sm text-gray-600">
-            <li *ngFor="let f of archivos()">
-              <mat-icon class="align-middle" style="font-size:18px">description</mat-icon>
-              {{ f.name }} ({{ (f.size/1024) | number:'1.0-0' }} KB)
-            </li>
-          </ul>
-          <p *ngIf="submitted() && !archivos().length" class="text-xs text-danger mt-1">
-            Debes subir al menos una foto o evidencia.
-          </p>
         </div>
 
         <div class="flex flex-wrap justify-end gap-2">
@@ -204,6 +230,8 @@ import { UsuarioService } from '@app/core/services/usuario.service';
   `,
 })
 export class PqrsFormComponent implements OnInit {
+  protected readonly TIPOS_EVIDENCIA_LABELS = TIPOS_EVIDENCIA_LABELS;
+
   private fb = inject(FormBuilder);
   private pqrs = inject(PqrsService);
   private catalogo = inject(CatalogoProductosService);
@@ -227,19 +255,20 @@ export class PqrsFormComponent implements OnInit {
   protected vendedores = signal<Usuario[]>([]);
   protected sugerencias = signal<Cliente[]>([]);
   protected clienteLabel = signal('');
-  protected archivos = signal<File[]>([]);
+  protected fotosPorProducto = signal<Record<string, Partial<Record<TipoEvidencia, File>>>>({});
   protected saving = signal(false);
   protected submitted = signal(false);
   protected categorias = signal<CategoriaProducto[]>([]);
   /** Opciones de producto por fila (clave = rowId del FormGroup). */
   protected opcionesByRowId = signal<Record<string, ProductoCatalogo[]>>({});
+  private searchTimer: ReturnType<typeof setTimeout> | undefined;
 
   protected puedeAsignarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
 
   protected form = this.fb.nonNullable.group({
     cliente_id: [null as number | null, Validators.required],
-    tipo: ['QUEJA', Validators.required],
-    inconformidad_id: [null as number | null, Validators.required],
+    tipo: ['QUEJA' as TipoPQRS, Validators.required],
+    inconformidad_id: [null as number | null],
     vendedor_id: [null as number | null],
     descripcion: [''],
     productos: this.fb.array<FormGroup>([]),
@@ -248,6 +277,11 @@ export class PqrsFormComponent implements OnInit {
   get productos(): FormArray<FormGroup> {
     return this.form.get('productos') as FormArray<FormGroup>;
   }
+
+  protected motivoObligatorio = (): boolean =>
+    !TIPOS_PRODUCTO_MOTIVO_OPCIONALES.has(this.form.get('tipo')?.value as TipoPQRS);
+
+  protected productosObligatorios = (): boolean => this.motivoObligatorio();
 
   ngOnInit(): void {
     this.pqrs.inconformidades().subscribe((list) => this.inconformidades.set(list));
@@ -258,13 +292,26 @@ export class PqrsFormComponent implements OnInit {
     const incCtrl = this.form.get('inconformidad_id');
     this.inconformidadIdSeleccionada.set(incCtrl?.value ?? null);
     incCtrl?.valueChanges.subscribe((v) => this.inconformidadIdSeleccionada.set(v));
+    this.form.get('tipo')?.valueChanges.subscribe(() => this.aplicarReglasPorTipo());
+    this.aplicarReglasPorTipo();
     if (this.puedeAsignarVendedor()) {
       this.usuarios.vendedores().subscribe({
         next: (list) => this.vendedores.set(list),
         error: () => this.vendedores.set([]),
       });
     }
-    this.addProducto();
+  }
+
+  private aplicarReglasPorTipo(): void {
+    const ctrl = this.form.get('inconformidad_id');
+    if (!ctrl) return;
+    if (this.motivoObligatorio()) {
+      ctrl.setValidators([Validators.required]);
+      if (!this.productos.length) this.addProducto();
+    } else {
+      ctrl.clearValidators();
+    }
+    ctrl.updateValueAndValidity({ emitEvent: false });
   }
 
   opcionesForRow(i: number) {
@@ -321,17 +368,44 @@ export class PqrsFormComponent implements OnInit {
 
   removeProducto(i: number): void {
     const rid = this.productos.at(i).get('rowId')?.value as string | undefined;
-    if (rid) this.clearOpcionesRow(rid);
+    if (rid) {
+      this.clearOpcionesRow(rid);
+      this.fotosPorProducto.update((m) => {
+        const n = { ...m };
+        delete n[rid];
+        return n;
+      });
+    }
     this.productos.removeAt(i);
   }
 
-  onFileChange(e: Event): void {
+  onProductPhoto(i: number, tipo: TipoEvidencia, e: Event): void {
     const input = e.target as HTMLInputElement;
-    if (!input.files) return;
-    this.archivos.set([...this.archivos(), ...Array.from(input.files)]);
+    const file = input.files?.[0];
+    const rowId = this.productos.at(i).get('rowId')?.value as string;
+    if (!rowId || !file) return;
+    this.fotosPorProducto.update((m) => ({
+      ...m,
+      [rowId]: { ...(m[rowId] || {}), [tipo]: file },
+    }));
   }
 
-  private searchTimer: any;
+  fotoProducto(i: number, tipo: TipoEvidencia): File | null {
+    const rowId = this.productos.at(i).get('rowId')?.value as string | undefined;
+    if (!rowId) return null;
+    return this.fotosPorProducto()[rowId]?.[tipo] ?? null;
+  }
+
+  productosFotosCompletas(): boolean {
+    if (!this.productos.length) return !this.productosObligatorios();
+    const fotos = this.fotosPorProducto();
+    return this.productos.controls.every((ctrl) => {
+      const rowId = ctrl.get('rowId')?.value as string;
+      const f = fotos[rowId];
+      return !!f?.NO_CONFORMIDAD && !!f?.FOTO_LOTE;
+    });
+  }
+
   onClienteSearch(text: string): void {
     this.clienteLabel.set(text);
     this.form.patchValue({ cliente_id: null });
@@ -353,10 +427,21 @@ export class PqrsFormComponent implements OnInit {
 
   save(): void {
     this.submitted.set(true);
-    if (this.form.invalid || !this.archivos().length || !this.productos.length) {
+    const requiereProductos = this.productosObligatorios();
+    if (
+      this.form.invalid ||
+      (requiereProductos && !this.productos.length) ||
+      !this.productosFotosCompletas()
+    ) {
       this.form.markAllAsTouched();
-      if (!this.archivos().length) {
-        this.snack.open('Debes subir al menos una foto o evidencia.', 'Cerrar', { duration: 2500 });
+      if (requiereProductos && !this.productos.length) {
+        this.snack.open('Debes registrar al menos un producto.', 'Cerrar', { duration: 3500 });
+      } else if (this.productos.length && !this.productosFotosCompletas()) {
+        this.snack.open(
+          'Cada producto debe tener las 2 fotos obligatorias antes de guardar.',
+          'Cerrar',
+          { duration: 3500 }
+        );
       }
       return;
     }
@@ -378,34 +463,95 @@ export class PqrsFormComponent implements OnInit {
         return row;
       }),
     };
-    if (!payload.inconformidad_id) delete payload.inconformidad_id;
+    if (!payload.inconformidad_id) {
+      payload.inconformidad_id = null;
+    }
     if (!this.puedeAsignarVendedor() || !payload.vendedor_id) {
       delete payload.vendedor_id;
     }
 
     this.pqrs.create(payload).subscribe({
-      next: (creada) => {
-        const files = this.archivos();
-        if (!files.length) {
-          this.finalize(creada.id);
-          return;
-        }
-        let remaining = files.length;
-        files.forEach((f) => {
-          this.pqrs.subirEvidencia(creada.id, f, true).subscribe({
-            next: () => { if (--remaining === 0) this.finalize(creada.id); },
-            error: () => { if (--remaining === 0) this.finalize(creada.id); },
-          });
-        });
-      },
+      next: (creada) => this.subirFotosProductos(creada),
       error: () => this.saving.set(false),
+    });
+  }
+
+  private subirFotosProductos(creada: PQRSDetail): void {
+    const fotosMap = this.fotosPorProducto();
+    const uploads: { productoId: number; tipo: TipoEvidencia; file: File }[] = [];
+
+    this.productos.controls.forEach((ctrl, idx) => {
+      const rowId = ctrl.get('rowId')?.value as string;
+      const prod = creada.productos[idx];
+      const fotos = fotosMap[rowId];
+      if (!prod?.id || !fotos) return;
+      if (fotos.NO_CONFORMIDAD) {
+        uploads.push({ productoId: prod.id, tipo: 'NO_CONFORMIDAD', file: fotos.NO_CONFORMIDAD });
+      }
+      if (fotos.FOTO_LOTE) {
+        uploads.push({ productoId: prod.id, tipo: 'FOTO_LOTE', file: fotos.FOTO_LOTE });
+      }
+    });
+
+    if (!uploads.length) {
+      // Sin productos (tipos opcionales) o sin fotos pendientes → notificar/finalizar.
+      if (!this.productos.length) {
+        this.finalize(creada.id);
+        return;
+      }
+      this.saving.set(false);
+      this.snack.open('No se pudieron asociar las fotos a los productos.', 'Cerrar', { duration: 3500 });
+      return;
+    }
+
+    let remaining = uploads.length;
+    let failed = false;
+    uploads.forEach(({ productoId, tipo, file }) => {
+      this.pqrs.subirEvidencia(creada.id, file, {
+        productoPqrsId: productoId,
+        tipo,
+        cargaInicial: true,
+      }).subscribe({
+        next: () => {
+          if (--remaining === 0) {
+            if (failed) {
+              this.saving.set(false);
+              this.snack.open(
+                'PQRS creada, pero faltaron fotos por subir. Complétalas en el detalle.',
+                'Cerrar',
+                { duration: 4000 }
+              );
+              this.router.navigate(['/pqrs', creada.id]);
+            } else {
+              this.finalize(creada.id);
+            }
+          }
+        },
+        error: () => {
+          failed = true;
+          if (--remaining === 0) {
+            this.saving.set(false);
+            this.snack.open(
+              'PQRS creada, pero hubo error al subir fotos. Complétalas en el detalle.',
+              'Cerrar',
+              { duration: 4000 }
+            );
+            this.router.navigate(['/pqrs', creada.id]);
+          }
+        },
+      });
     });
   }
 
   private finalize(id: number): void {
     this.pqrs.notificarCalidad(id).subscribe({
       next: () => this.finishCreate(id),
-      error: () => this.finishCreate(id),
+      error: (e) => {
+        this.saving.set(false);
+        const msg = e?.error?.detail || 'Faltan fotos obligatorias por producto.';
+        this.snack.open(String(msg), 'Cerrar', { duration: 4000 });
+        this.router.navigate(['/pqrs', id]);
+      },
     });
   }
 

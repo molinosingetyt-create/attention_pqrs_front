@@ -124,6 +124,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html,
+body,
+.mat-typography,
+.p-component {
+  font-family: var(--font-family);
+}
+
 h1,
 h2,
 h3 {
@@ -316,6 +323,10 @@ h3 {
 .badge-rejected {
   background: #FCEFD9;
   color: #C7272D;
+}
+.badge-pending {
+  background: #e5e7eb;
+  color: #4b5563;
 }
 
 .page-head {

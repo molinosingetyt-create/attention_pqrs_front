@@ -140,7 +140,7 @@ export class ConfiguracionAreasComponent implements OnInit {
         this.reload();
         this.snack.open('Eliminada', 'Cerrar', { duration: 2000 });
       },
-      error: () => this.snack.open('No se puede eliminar (¿tiene inconformidades?)', 'Cerrar'),
+      error: () => this.snack.open('No se puede eliminar (¿tiene motivos?)', 'Cerrar'),
     });
   }
 }

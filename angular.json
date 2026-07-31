@@ -31,7 +31,7 @@
             ],
             "styles": [
               "node_modules/@angular/material/prebuilt-themes/azure-blue.css",
-              "node_modules/primeng/resources/themes/lara-light-indigo/theme.css",
+              "src/themes/lara-light-indigo.css",
               "node_modules/primeng/resources/primeng.min.css",
               "node_modules/primeicons/primeicons.css",
               "node_modules/primeflex/primeflex.css",
@@ -86,5 +86,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }
