@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import {
+  Area,
   AnalisisResponsabilidad,
   CalificacionAtencion,
   DashboardResponse,
@@ -24,6 +25,9 @@ export interface ListaPQRSFiltros {
   tipo?: string;
   cliente_id?: number;
   vendedor_id?: number;
+  ciudad?: string;
+  estado_area_responsable?: string;
+  inconformidad_id?: number;
   q?: string;
   fecha_desde?: string;
   fecha_hasta?: string;
@@ -53,6 +57,19 @@ export class PqrsService {
     return this.http.get<Page<PQRSListItem>>(`${this.api}/pqrs/`, { params });
   }
 
+  opcionesFiltro() {
+    return this.http.get<{
+      ciudades: string[];
+      areas: Area[];
+      inconformidades: {
+        id: number;
+        nombre: string;
+        area_id: number;
+        area_nombre?: string | null;
+      }[];
+    }>(`${this.api}/pqrs/opciones-filtro`);
+  }
+
   create(data: any) {
     return this.http.post<PQRSDetail>(`${this.api}/pqrs/`, data);
   }
@@ -63,6 +80,10 @@ export class PqrsService {
 
   update(id: number, data: any) {
     return this.http.put<PQRSDetail>(`${this.api}/pqrs/${id}`, data);
+  }
+
+  delete(id: number) {
+    return this.http.delete<void>(`${this.api}/pqrs/${id}`);
   }
 
   addProductos(id: number, productos: ProductoPQRS[]) {
@@ -134,7 +155,11 @@ export class PqrsService {
 
   guardarSatisfaccionCliente(
     id: number,
-    data: { atencion_oportunidad: CalificacionAtencion; expectativa_cumplida: boolean }
+    data: {
+      atencion_oportunidad?: CalificacionAtencion | null;
+      expectativa_cumplida: boolean;
+      comentarios?: string | null;
+    }
   ) {
     return this.http.put<SatisfaccionCliente>(
       `${this.api}/pqrs/${id}/satisfaccion-cliente`,

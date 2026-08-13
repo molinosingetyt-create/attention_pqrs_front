@@ -8,7 +8,7 @@ import { environment } from '@env/environment';
 import { AuthService } from '@app/core/services/auth.service';
 import { PqrsService } from '@app/core/services/pqrs.service';
 import { UsuarioService } from '@app/core/services/usuario.service';
-import { Inconformidad, PQRSDetail, TIPOS_EVIDENCIA_LABELS, TipoEvidencia, TipoPQRS, Usuario, CALIFICACION_ATENCION_LABELS, CalificacionAtencion, CategoriaProducto, ProductoCatalogo } from '@app/core/models/api.models';
+import { Inconformidad, PQRSDetail, TIPOS_EVIDENCIA_LABELS, TipoEvidencia, TipoPQRS, Usuario, CategoriaProducto, ProductoCatalogo } from '@app/core/models/api.models';
 import { P } from '@app/core/permissions';
 import { CatalogoProductosService } from '@app/core/services/catalogo-productos.service';
 
@@ -161,6 +161,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
             <div class="text-sm space-y-1">
               <div><strong>Nombre:</strong> {{ p.cliente.nombre }} {{ p.cliente.apellidos }}</div>
               <div><strong>NIT:</strong> {{ p.cliente.nit }}</div>
+              <div><strong>Teléfono:</strong> {{ p.cliente.telefono || '—' }}</div>
               <div><strong>Correo:</strong> {{ p.cliente.correo || '—' }}</div>
               <div><strong>Ciudad:</strong> {{ p.cliente.ciudad || '—' }}</div>
             </div>
@@ -556,18 +557,16 @@ const emptyNuevoProducto = (): ProductoDraft => ({
         <h3 class="font-semibold mb-4">Satisfacción del cliente</h3>
 
         <ng-container *ngIf="p.satisfaccion_cliente as sat">
-          <div *ngIf="!puedeGestionarSatisfaccion(p)" class="space-y-4">
-            <div>
-              <p class="text-sm text-gray-700 mb-1">
-                La atención en términos de oportunidad y rapidez en el tiempo de respuesta fue:
-              </p>
-              <p class="font-medium">{{ CALIFICACION_ATENCION_LABELS[sat.atencion_oportunidad] }}</p>
-            </div>
+          <div class="space-y-4">
             <div>
               <p class="text-sm text-gray-700 mb-1">
                 La respuesta, dada a su requerimiento cumplió sus expectativas:
               </p>
               <p class="font-medium">{{ sat.expectativa_cumplida ? 'Sí' : 'No' }}</p>
+            </div>
+            <div *ngIf="sat.comentarios">
+              <p class="text-sm text-gray-700 mb-1">Comentarios:</p>
+              <p class="text-sm whitespace-pre-line">{{ sat.comentarios }}</p>
             </div>
             <p class="text-xs text-gray-500">
               {{ sat.fecha_actualizacion | date:'short' }}
@@ -577,34 +576,10 @@ const emptyNuevoProducto = (): ProductoDraft => ({
         </ng-container>
 
         <form
-          *ngIf="puedeGestionarSatisfaccion(p)"
+          *ngIf="puedeGestionarSatisfaccion(p) && !p.satisfaccion_cliente"
           [formGroup]="satisfaccionForm"
           (ngSubmit)="guardarSatisfaccion()"
           class="space-y-5">
-          <div>
-            <p class="text-sm font-medium text-gray-800 mb-3">
-              La atención en términos de oportunidad y rapidez en el tiempo de respuesta fue *
-            </p>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <label
-                *ngFor="let opt of calificacionesAtencion"
-                class="inline-flex items-center gap-2 cursor-pointer text-sm border border-border rounded-lg px-3 py-2"
-                [class.border-brand]="satisfaccionForm.get('atencion_oportunidad')?.value === opt.value"
-                [class.bg-brand-light]="satisfaccionForm.get('atencion_oportunidad')?.value === opt.value">
-                <input
-                  type="radio"
-                  formControlName="atencion_oportunidad"
-                  [value]="opt.value"
-                  class="input-checkbox-rounded" />
-                {{ opt.label }}
-              </label>
-            </div>
-            <p *ngIf="satisfaccionSubmitted() && satisfaccionForm.get('atencion_oportunidad')?.invalid"
-               class="text-xs text-danger mt-1">
-              Debes seleccionar una calificación.
-            </p>
-          </div>
-
           <div>
             <p class="text-sm font-medium text-gray-800 mb-3">
               La respuesta, dada a su requerimiento cumplió sus expectativas *
@@ -625,6 +600,15 @@ const emptyNuevoProducto = (): ProductoDraft => ({
             </p>
           </div>
 
+          <div>
+            <label class="label">Comentarios</label>
+            <textarea
+              rows="3"
+              class="input w-full"
+              formControlName="comentarios"
+              placeholder="Observaciones adicionales (opcional)"></textarea>
+          </div>
+
           <div class="flex justify-end">
             <button type="submit" class="btn-primary" [disabled]="satisfaccionSaving()">
               <mat-icon>save</mat-icon> Guardar satisfacción
@@ -642,11 +626,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
 })
 export class PqrsDetailComponent implements OnInit {
   protected readonly TIPOS_EVIDENCIA_LABELS = TIPOS_EVIDENCIA_LABELS;
-  protected readonly CALIFICACION_ATENCION_LABELS = CALIFICACION_ATENCION_LABELS;
   protected readonly tiposEvidencia: TipoEvidencia[] = ['NO_CONFORMIDAD', 'FOTO_LOTE'];
-  protected readonly calificacionesAtencion = (
-    Object.entries(CALIFICACION_ATENCION_LABELS) as [CalificacionAtencion, string][]
-  ).map(([value, label]) => ({ value, label }));
 
   private route = inject(ActivatedRoute);
   private svc = inject(PqrsService);
@@ -797,8 +777,8 @@ export class PqrsDetailComponent implements OnInit {
   });
 
   protected satisfaccionForm = this.fb.group({
-    atencion_oportunidad: [null as CalificacionAtencion | null, Validators.required],
     expectativa_cumplida: [null as boolean | null, Validators.required],
+    comentarios: [''],
   });
 
   protected editForm = this.fb.group({
@@ -1014,8 +994,8 @@ export class PqrsDetailComponent implements OnInit {
   protected resetSatisfaccionForm(p: PQRSDetail): void {
     const s = p.satisfaccion_cliente;
     this.satisfaccionForm.reset({
-      atencion_oportunidad: s?.atencion_oportunidad ?? null,
       expectativa_cumplida: s ? s.expectativa_cumplida : null,
+      comentarios: s?.comentarios ?? '',
     });
     this.satisfaccionSubmitted.set(false);
   }
@@ -1030,12 +1010,12 @@ export class PqrsDetailComponent implements OnInit {
     if (!p || !this.puedeGestionarSatisfaccion(p)) return;
 
     const raw = this.satisfaccionForm.getRawValue();
-    if (raw.atencion_oportunidad == null || raw.expectativa_cumplida == null) return;
+    if (raw.expectativa_cumplida == null) return;
 
     this.satisfaccionSaving.set(true);
     this.svc.guardarSatisfaccionCliente(p.id, {
-      atencion_oportunidad: raw.atencion_oportunidad,
       expectativa_cumplida: raw.expectativa_cumplida,
+      comentarios: (raw.comentarios || '').trim() || null,
     }).subscribe({
       next: () => {
         this.snack.open('Satisfacción guardada', 'Cerrar', { duration: 2000 });
@@ -1129,11 +1109,11 @@ export class PqrsDetailComponent implements OnInit {
   private pqrsServiceSubir(pqrsId: number, file: File, productoId: number, tipo: TipoEvidencia): void {
     this.svc.subirEvidencia(pqrsId, file, { productoPqrsId: productoId, tipo }).subscribe({
       next: () => {
-        this.snack.open('Foto subida correctamente', 'Cerrar', { duration: 2000 });
+        this.snack.open('Foto actualizada correctamente', 'Cerrar', { duration: 2000 });
         this.load(pqrsId);
       },
       error: (err) => {
-        const msg = err?.error?.detail || 'No se pudo subir la foto';
+        const msg = err?.error?.detail || 'No se pudo actualizar la foto';
         this.snack.open(String(msg), 'Cerrar', { duration: 3500 });
       },
     });

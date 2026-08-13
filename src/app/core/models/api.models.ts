@@ -170,8 +170,9 @@ export const CALIFICACION_ATENCION_LABELS: Record<CalificacionAtencion, string> 
 
 export interface SatisfaccionCliente {
   id: number;
-  atencion_oportunidad: CalificacionAtencion;
+  atencion_oportunidad?: CalificacionAtencion | null;
   expectativa_cumplida: boolean;
+  comentarios?: string | null;
   usuario_id?: number | null;
   usuario_nombre?: string | null;
   fecha_actualizacion: string;
@@ -280,6 +281,8 @@ export interface PQRSListItem {
   vendedor_nombre?: string | null;
   area_codigo?: string | null;
   area_nombre?: string | null;
+  inconformidad_id?: number | null;
+  inconformidad_nombre?: string | null;
   estado_area_responsable: EstadoAreaResponsable;
   numero_factura?: string | null;
   fecha_creacion: string;

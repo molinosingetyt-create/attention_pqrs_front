@@ -14,6 +14,7 @@ export const P = {
   PQRS_CREAR: 'pqrs.crear',
   PQRS_VER: 'pqrs.ver',
   PQRS_EDITAR: 'pqrs.editar',
+  PQRS_ELIMINAR: 'pqrs.eliminar',
   PQRS_EXPORTAR: 'pqrs.exportar',
   PQRS_SEGUIMIENTO_CREAR: 'pqrs.seguimiento.crear',
   PQRS_EVIDENCIA_SUBIR: 'pqrs.evidencia.subir',

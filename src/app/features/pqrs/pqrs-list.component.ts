@@ -51,10 +51,26 @@ import { P } from '@app/core/permissions';
             <option value="RECHAZADA">Rechazada</option>
           </select>
           <input type="date" [(ngModel)]="filtros.fecha_desde" (ngModelChange)="onFilterChange()" class="input" />
+          <select [(ngModel)]="filtros.ciudad" (ngModelChange)="onFilterChange()" class="input">
+            <option value="">Todas las ciudades</option>
+            <option *ngFor="let c of ciudades()" [ngValue]="c">{{ c }}</option>
+          </select>
+          <select [(ngModel)]="filtros.estado_area_responsable" (ngModelChange)="onFilterChange()" class="input">
+            <option value="">Todos los estados de área resp.</option>
+            <option value="NO GESTIONADO">No gestionado</option>
+            <option value="PROCEDENTE">Procedente</option>
+            <option value="NO PROCEDENTE">No procedente</option>
+          </select>
+          <select [(ngModel)]="filtros.inconformidad_id" (ngModelChange)="onFilterChange()" class="input">
+            <option [ngValue]="''">Todos los motivos</option>
+            <option *ngFor="let i of inconformidades()" [ngValue]="i.id">
+              {{ i.nombre }}<span *ngIf="i.area_nombre"> · {{ i.area_nombre }}</span>
+            </option>
+          </select>
           <select *ngIf="puedeFiltrarVendedor()"
                   [(ngModel)]="filtros.vendedor_id"
                   (ngModelChange)="onFilterChange()"
-                  class="input sm:col-span-2 lg:col-span-4">
+                  class="input sm:col-span-2">
             <option [ngValue]="''">Todos los vendedores</option>
             <option *ngFor="let v of vendedores()" [ngValue]="v.id">
               {{ v.nombre }} · {{ v.email }}
@@ -72,6 +88,7 @@ import { P } from '@app/core/permissions';
                 <th>Cliente</th>
                 <th>Vendedor</th>
                 <th>Área responsable</th>
+                <th>Motivo</th>
                 <th matTooltip="Estado del área responsable">Estado área resp.</th>
                 <th>Factura</th>
                 <th>Estado</th>
@@ -86,6 +103,7 @@ import { P } from '@app/core/permissions';
                 <td>{{ p.cliente_nombre }}</td>
                 <td>{{ p.vendedor_nombre || '—' }}</td>
                 <td>{{ p.area_nombre || '—' }}</td>
+                <td>{{ p.inconformidad_nombre || '—' }}</td>
                 <td>
                   <span class="badge"
                         [class.badge-pending]="p.estado_area_responsable === 'NO GESTIONADO'"
@@ -128,11 +146,19 @@ import { P } from '@app/core/permissions';
                        aria-label="Ver detalle">
                       <mat-icon>visibility</mat-icon>
                     </a>
+                    <button *ngIf="puedeEliminarPQRS()"
+                            type="button"
+                            class="icon-btn icon-delete"
+                            matTooltip="Eliminar PQRS"
+                            aria-label="Eliminar PQRS"
+                            (click)="eliminar(p)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
                   </div>
                 </td>
               </tr>
               <tr *ngIf="!items().length">
-                <td colspan="10" class="py-6 text-center text-gray-400">Sin resultados.</td>
+                <td colspan="11" class="py-6 text-center text-gray-400">Sin resultados.</td>
               </tr>
             </tbody>
           </table>
@@ -140,28 +166,41 @@ import { P } from '@app/core/permissions';
 
         <!-- Vista tarjetas (móvil) -->
         <div class="sm:hidden space-y-2">
-          <a *ngFor="let p of items()" [routerLink]="['/pqrs', p.id]"
-             class="block p-3 rounded-lg border border-border hover:bg-gray-50">
-            <div class="flex items-center justify-between mb-1">
-              <span class="font-semibold text-sm">{{ p.radicado }} · {{ p.tipo }}</span>
-              <span class="badge"
-                    [class.badge-open]="p.estado === 'ABIERTA'"
-                    [class.badge-progress]="p.estado === 'EN_PROCESO'"
-                    [class.badge-closed]="p.estado === 'CERRADA'"
-                    [class.badge-rejected]="p.estado === 'RECHAZADA'">
-                {{ p.estado }}
-              </span>
+          <div *ngFor="let p of items()" class="p-3 rounded-lg border border-border hover:bg-gray-50">
+            <a [routerLink]="['/pqrs', p.id]" class="block">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-semibold text-sm">{{ p.radicado }} · {{ p.tipo }}</span>
+                <span class="badge"
+                      [class.badge-open]="p.estado === 'ABIERTA'"
+                      [class.badge-progress]="p.estado === 'EN_PROCESO'"
+                      [class.badge-closed]="p.estado === 'CERRADA'"
+                      [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                  {{ p.estado }}
+                </span>
+              </div>
+              <div class="text-sm text-gray-700 truncate">{{ p.cliente_nombre }}</div>
+              <div class="text-xs text-gray-500 mt-1">
+                Área responsable: {{ p.area_nombre || '—' }}
+                · {{ p.estado_area_responsable }}
+              </div>
+              <div class="text-xs text-gray-500 mt-1 truncate">
+                Motivo: {{ p.inconformidad_nombre || '—' }}
+              </div>
+              <div class="text-xs text-gray-500 mt-1 flex items-center justify-between">
+                <span>Factura: {{ p.numero_factura || '—' }}</span>
+                <span>{{ p.fecha_creacion | date:'dd/MM/yy' }}</span>
+              </div>
+            </a>
+            <div *ngIf="puedeEliminarPQRS()" class="flex justify-end mt-2">
+              <button type="button"
+                      class="icon-btn icon-delete"
+                      matTooltip="Eliminar PQRS"
+                      aria-label="Eliminar PQRS"
+                      (click)="eliminar(p)">
+                <mat-icon>delete</mat-icon>
+              </button>
             </div>
-            <div class="text-sm text-gray-700 truncate">{{ p.cliente_nombre }}</div>
-            <div class="text-xs text-gray-500 mt-1">
-              Área responsable: {{ p.area_nombre || '—' }}
-              · {{ p.estado_area_responsable }}
-            </div>
-            <div class="text-xs text-gray-500 mt-1 flex items-center justify-between">
-              <span>Factura: {{ p.numero_factura || '—' }}</span>
-              <span>{{ p.fecha_creacion | date:'dd/MM/yy' }}</span>
-            </div>
-          </a>
+          </div>
           <div *ngIf="!items().length" class="py-6 text-center text-gray-400 text-sm">
             Sin resultados.
           </div>
@@ -191,10 +230,27 @@ export class PqrsListComponent implements OnInit {
   protected page = signal(1);
   protected pages = signal(0);
   protected vendedores = signal<Usuario[]>([]);
-  protected filtros: any = { q: '', estado: '', tipo: '', fecha_desde: '', vendedor_id: '' };
+  protected ciudades = signal<string[]>([]);
+  protected inconformidades = signal<{
+    id: number;
+    nombre: string;
+    area_id: number;
+    area_nombre?: string | null;
+  }[]>([]);
+  protected filtros: any = {
+    q: '',
+    estado: '',
+    tipo: '',
+    fecha_desde: '',
+    ciudad: '',
+    estado_area_responsable: '',
+    inconformidad_id: '',
+    vendedor_id: '',
+  };
 
   protected puedeFiltrarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
+  protected puedeEliminarPQRS = (): boolean => this.auth.can(P.PQRS_ELIMINAR);
 
   ngOnInit(): void {
     if (this.puedeFiltrarVendedor()) {
@@ -203,12 +259,25 @@ export class PqrsListComponent implements OnInit {
         error: () => this.vendedores.set([]),
       });
     }
+    this.svc.opcionesFiltro().subscribe({
+      next: (opts) => {
+        this.ciudades.set(opts.ciudades || []);
+        this.inconformidades.set(opts.inconformidades || []);
+      },
+      error: () => {
+        this.ciudades.set([]);
+        this.inconformidades.set([]);
+      },
+    });
     this.load();
   }
 
   load(): void {
     const params = { ...this.filtros, page: this.page(), size: 20 };
     if (!params.vendedor_id) delete params.vendedor_id;
+    if (!params.inconformidad_id) delete params.inconformidad_id;
+    if (!params.ciudad) delete params.ciudad;
+    if (!params.estado_area_responsable) delete params.estado_area_responsable;
     this.svc.list(params).subscribe((r) => {
       this.items.set(r.items);
       this.total.set(r.total);
@@ -234,6 +303,21 @@ export class PqrsListComponent implements OnInit {
         a.click();
         URL.revokeObjectURL(url);
         this.snack.open('Exportado', 'Cerrar', { duration: 1500 });
+      },
+    });
+  }
+
+  eliminar(p: PQRSListItem): void {
+    if (!this.puedeEliminarPQRS()) return;
+    if (!confirm(`¿Eliminar la PQRS ${p.radicado}? Esta acción no se puede deshacer.`)) return;
+    this.svc.delete(p.id).subscribe({
+      next: () => {
+        this.snack.open('PQRS eliminada', 'Cerrar', { duration: 2000 });
+        this.load();
+      },
+      error: (e) => {
+        const msg = e?.error?.detail || 'No se pudo eliminar la PQRS';
+        this.snack.open(String(msg), 'Cerrar', { duration: 3500 });
       },
     });
   }

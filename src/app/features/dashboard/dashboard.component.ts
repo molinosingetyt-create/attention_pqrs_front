@@ -16,6 +16,13 @@ import { DashboardResponse } from '@app/core/models/api.models';
       <mat-spinner diameter="40"></mat-spinner>
     </div>
 
+    <div *ngIf="!loading() && error()" class="card text-center space-y-3 p-8">
+      <p class="text-danger font-medium">{{ error() }}</p>
+      <button type="button" class="btn-primary" (click)="loadDashboard()">
+        <mat-icon>refresh</mat-icon> Reintentar
+      </button>
+    </div>
+
     <div *ngIf="data() as d" class="space-y-6">
       <h2 class="text-2xl font-bold text-gray-800">Dashboard</h2>
 
@@ -310,6 +317,7 @@ export class DashboardComponent implements OnInit {
   private svc = inject(PqrsService);
   protected data = signal<DashboardResponse | null>(null);
   protected loading = signal(true);
+  protected error = signal<string | null>(null);
   protected categoryLoading = signal(false);
   protected fechaInicio = '';
   protected fechaFin = '';
@@ -322,8 +330,9 @@ export class DashboardComponent implements OnInit {
     this.loadCategoryData();
   }
 
-  private loadDashboard(): void {
+  protected loadDashboard(): void {
     this.loading.set(true);
+    this.error.set(null);
     this.svc.dashboard(this.categoryFilters()).subscribe({
       next: (r) => {
         this.data.set(r);
@@ -331,8 +340,10 @@ export class DashboardComponent implements OnInit {
         this.categoryLoading.set(false);
       },
       error: () => {
+        this.data.set(null);
         this.loading.set(false);
         this.categoryLoading.set(false);
+        this.error.set('No se pudo cargar el dashboard. Verifica que el API esté en ejecución.');
       },
     });
   }

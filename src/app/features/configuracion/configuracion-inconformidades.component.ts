@@ -219,7 +219,7 @@ export class ConfiguracionInconformidadesComponent implements OnInit {
     this.api.eliminarInconformidad(i.id).subscribe({
       next: () => {
         this.loadInc();
-        this.snack.open('Eliminada', 'Cerrar', { duration: 2000 });
+        this.snack.open('Motivo eliminado', 'Cerrar', { duration: 2000 });
       },
       error: () => this.snack.open('Error al eliminar', 'Cerrar'),
     });
