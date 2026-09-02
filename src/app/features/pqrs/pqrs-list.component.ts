@@ -67,6 +67,12 @@ import { P } from '@app/core/permissions';
               {{ i.nombre }}<span *ngIf="i.area_nombre"> · {{ i.area_nombre }}</span>
             </option>
           </select>
+          <select [(ngModel)]="filtros.producto_catalogo_id" (ngModelChange)="onFilterChange()" class="input">
+            <option [ngValue]="''">Todos los productos</option>
+            <option *ngFor="let p of productos()" [ngValue]="p.id">
+              {{ p.nombre }}<span *ngIf="p.categoria_nombre"> · {{ p.categoria_nombre }}</span>
+            </option>
+          </select>
           <select *ngIf="puedeFiltrarVendedor()"
                   [(ngModel)]="filtros.vendedor_id"
                   (ngModelChange)="onFilterChange()"
@@ -237,6 +243,12 @@ export class PqrsListComponent implements OnInit {
     area_id: number;
     area_nombre?: string | null;
   }[]>([]);
+  protected productos = signal<{
+    id: number;
+    nombre: string;
+    categoria_id: number;
+    categoria_nombre?: string | null;
+  }[]>([]);
   protected filtros: any = {
     q: '',
     estado: '',
@@ -245,6 +257,7 @@ export class PqrsListComponent implements OnInit {
     ciudad: '',
     estado_area_responsable: '',
     inconformidad_id: '',
+    producto_catalogo_id: '',
     vendedor_id: '',
   };
 
@@ -263,10 +276,12 @@ export class PqrsListComponent implements OnInit {
       next: (opts) => {
         this.ciudades.set(opts.ciudades || []);
         this.inconformidades.set(opts.inconformidades || []);
+        this.productos.set(opts.productos || []);
       },
       error: () => {
         this.ciudades.set([]);
         this.inconformidades.set([]);
+        this.productos.set([]);
       },
     });
     this.load();
@@ -276,6 +291,7 @@ export class PqrsListComponent implements OnInit {
     const params = { ...this.filtros, page: this.page(), size: 20 };
     if (!params.vendedor_id) delete params.vendedor_id;
     if (!params.inconformidad_id) delete params.inconformidad_id;
+    if (!params.producto_catalogo_id) delete params.producto_catalogo_id;
     if (!params.ciudad) delete params.ciudad;
     if (!params.estado_area_responsable) delete params.estado_area_responsable;
     this.svc.list(params).subscribe((r) => {

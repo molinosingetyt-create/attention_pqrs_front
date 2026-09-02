@@ -1,8 +1,27 @@
 export type Rol =
   | 'ADMINISTRADOR'
+  | 'ADMINISTRADOR_SEDE'
   | 'VENDEDOR'
   | 'ADMINISTRATIVO_COMERCIAL'
   | 'CALIDAD';
+
+export const ROL_LABELS: Record<Rol, string> = {
+  ADMINISTRADOR: 'Administrador',
+  ADMINISTRADOR_SEDE: 'Administrador de sede',
+  VENDEDOR: 'Vendedor',
+  ADMINISTRATIVO_COMERCIAL: 'Administrativo comercial',
+  CALIDAD: 'Calidad',
+};
+
+/** Roles que requieren tener una sede asignada. */
+export const ROLES_CON_SEDE_OBLIGATORIA: Rol[] = ['ADMINISTRADOR_SEDE', 'VENDEDOR'];
+
+export interface Sede {
+  id: number;
+  codigo: string;
+  nombre: string;
+  activa: boolean;
+}
 
 export type TipoPQRS =
   | 'QUEJA'
@@ -21,6 +40,8 @@ export interface Usuario {
   rol: Rol;
   activo: boolean;
   fecha_creacion: string;
+  sede_id?: number | null;
+  sede?: Sede | null;
 }
 
 export interface LoginResponse {
@@ -62,6 +83,7 @@ export interface Cliente {
   ciudad?: string | null;
   activo?: boolean;
   vendedor_asignado_id?: number | null;
+  sede_id?: number | null;
 }
 
 export interface FilaCargaClienteResultado {

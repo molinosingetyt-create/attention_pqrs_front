@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { PermisoCatalogo, Rol } from '@app/core/models/api.models';
+import { PermisoCatalogo, ROL_LABELS, Rol } from '@app/core/models/api.models';
 import { PermisoService } from '@app/core/services/permiso.service';
 import { P } from '@app/core/permissions';
 
 const ROLES: Rol[] = [
   'ADMINISTRADOR',
+  'ADMINISTRADOR_SEDE',
   'VENDEDOR',
   'ADMINISTRATIVO_COMERCIAL',
   'CALIDAD',
@@ -121,13 +122,7 @@ export class ConfiguracionPermisosComponent implements OnInit {
   }
 
   protected etiquetaRol(rol: Rol): string {
-    const labels: Record<Rol, string> = {
-      ADMINISTRADOR: 'Administrador',
-      VENDEDOR: 'Vendedor',
-      ADMINISTRATIVO_COMERCIAL: 'Administrativo comercial',
-      CALIDAD: 'Calidad',
-    };
-    return labels[rol] ?? rol;
+    return ROL_LABELS[rol] ?? rol;
   }
 
   protected esSoloAdmin(codigo: string): boolean {

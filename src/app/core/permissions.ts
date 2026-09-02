@@ -29,6 +29,7 @@ export const P = {
   CONFIG_GESTIONAR: 'configuracion.gestionar',
   INCONFORMIDADES_GESTIONAR: 'inconformidades.gestionar',
   PERMISOS_GESTIONAR: 'permisos.gestionar',
+  SEDES_GESTIONAR: 'sedes.gestionar',
 } as const;
 
 export type PermisoCodigo = (typeof P)[keyof typeof P];

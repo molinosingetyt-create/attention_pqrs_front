@@ -28,6 +28,7 @@ export interface ListaPQRSFiltros {
   ciudad?: string;
   estado_area_responsable?: string;
   inconformidad_id?: number;
+  producto_catalogo_id?: number;
   q?: string;
   fecha_desde?: string;
   fecha_hasta?: string;
@@ -66,6 +67,12 @@ export class PqrsService {
         nombre: string;
         area_id: number;
         area_nombre?: string | null;
+      }[];
+      productos: {
+        id: number;
+        nombre: string;
+        categoria_id: number;
+        categoria_nombre?: string | null;
       }[];
     }>(`${this.api}/pqrs/opciones-filtro`);
   }

@@ -131,6 +131,15 @@ import { P } from '@app/core/permissions';
                 <mat-icon>admin_panel_settings</mat-icon>
                 <span>Permisos por perfil</span>
               </a>
+              <a
+                *ngIf="auth.can(P.SEDES_GESTIONAR)"
+                routerLink="/configuracion/sedes"
+                routerLinkActive="active"
+                class="nav-item nav-config-child"
+                (click)="onNavItemClick()">
+                <mat-icon>store</mat-icon>
+                <span>Sedes</span>
+              </a>
             </div>
           </div>
         </nav>

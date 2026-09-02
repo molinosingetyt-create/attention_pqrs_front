@@ -145,6 +145,14 @@ export const routes: Routes = [
                 (m) => m.ConfiguracionPermisosComponent
               ),
           },
+          {
+            path: 'sedes',
+            canActivate: [permissionGuard([P.SEDES_GESTIONAR])],
+            loadComponent: () =>
+              import('./features/sedes/sedes-list.component').then(
+                (m) => m.SedesListComponent
+              ),
+          },
         ],
       },
     ],

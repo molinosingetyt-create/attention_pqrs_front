@@ -4,8 +4,9 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Usuario } from '@app/core/models/api.models';
+import { ROL_LABELS, ROLES_CON_SEDE_OBLIGATORIA, Rol, Sede, Usuario } from '@app/core/models/api.models';
 import { UsuarioService } from '@app/core/services/usuario.service';
+import { SedeService } from '@app/core/services/sede.service';
 
 @Component({
   selector: 'app-usuarios-list',
@@ -33,6 +34,7 @@ import { UsuarioService } from '@app/core/services/usuario.service';
                 <th>Nombre</th>
                 <th>Email</th>
                 <th>Rol</th>
+                <th>Sede</th>
                 <th>Estado</th>
                 <th>Creado</th>
                 <th class="text-right">Acciones</th>
@@ -42,7 +44,8 @@ import { UsuarioService } from '@app/core/services/usuario.service';
               <tr *ngFor="let u of usuarios()">
                 <td class="font-medium">{{ u.nombre }}</td>
                 <td class="break-all">{{ u.email }}</td>
-                <td class="text-brand-dark">{{ u.rol }}</td>
+                <td class="text-brand-dark">{{ rolLabels[u.rol] }}</td>
+                <td>{{ u.sede?.nombre ?? '—' }}</td>
                 <td>
                   <span class="badge" [class.badge-closed]="u.activo" [class.badge-rejected]="!u.activo">
                     {{ u.activo ? 'Activo' : 'Inactivo' }}
@@ -51,6 +54,13 @@ import { UsuarioService } from '@app/core/services/usuario.service';
                 <td class="text-gray-500 whitespace-nowrap">{{ u.fecha_creacion | date:'shortDate' }}</td>
                 <td class="text-right whitespace-nowrap">
                   <div class="inline-flex items-center gap-1 justify-end">
+                    <button type="button"
+                            class="icon-btn icon-edit"
+                            (click)="abrirEditarUsuario(u)"
+                            matTooltip="Editar usuario"
+                            aria-label="Editar usuario">
+                      <mat-icon>edit</mat-icon>
+                    </button>
                     <button type="button"
                             class="icon-btn icon-view"
                             (click)="seleccionarCambioPassword(u)"
@@ -70,7 +80,7 @@ import { UsuarioService } from '@app/core/services/usuario.service';
                 </td>
               </tr>
               <tr *ngIf="!usuarios().length">
-                <td colspan="6" class="py-6 text-center text-gray-400">Sin resultados.</td>
+                <td colspan="7" class="py-6 text-center text-gray-400">Sin resultados.</td>
               </tr>
             </tbody>
           </table>
@@ -91,10 +101,18 @@ import { UsuarioService } from '@app/core/services/usuario.service';
               </span>
             </div>
             <div class="mt-2 text-xs flex items-center justify-between">
-              <span class="text-brand-dark font-medium">{{ u.rol }}</span>
+              <span class="text-brand-dark font-medium">{{ rolLabels[u.rol] }}</span>
               <span class="text-gray-500">{{ u.fecha_creacion | date:'shortDate' }}</span>
             </div>
+            <div class="mt-1 text-xs text-gray-500">{{ u.sede?.nombre ?? 'Sin sede' }}</div>
             <div class="mt-2 flex justify-end gap-1">
+              <button type="button"
+                      class="icon-btn icon-edit"
+                      (click)="abrirEditarUsuario(u)"
+                      matTooltip="Editar usuario"
+                      aria-label="Editar usuario">
+                <mat-icon>edit</mat-icon>
+              </button>
               <button type="button"
                       class="icon-btn icon-view"
                       (click)="seleccionarCambioPassword(u)"
@@ -140,9 +158,19 @@ import { UsuarioService } from '@app/core/services/usuario.service';
               <label class="label">Rol</label>
               <select class="input" formControlName="rol">
                 <option value="ADMINISTRADOR">Administrador</option>
+                <option value="ADMINISTRADOR_SEDE">Administrador de sede</option>
                 <option value="VENDEDOR">Vendedor</option>
                 <option value="ADMINISTRATIVO_COMERCIAL">Administrativo comercial</option>
                 <option value="CALIDAD">Calidad</option>
+              </select>
+            </div>
+            <div *ngIf="sedeVisible(form.controls.rol.value)">
+              <label class="label">Sede{{ sedeRequerida(form.controls.rol.value) ? '' : ' (opcional)' }}</label>
+              <select class="input" formControlName="sede_id">
+                <option [ngValue]="null" [disabled]="sedeRequerida(form.controls.rol.value)">
+                  {{ sedeRequerida(form.controls.rol.value) ? 'Selecciona una sede' : 'Sin sede' }}
+                </option>
+                <option *ngFor="let s of sedes()" [ngValue]="s.id">{{ s.nombre }}</option>
               </select>
             </div>
             <div>
@@ -152,6 +180,47 @@ import { UsuarioService } from '@app/core/services/usuario.service';
             <div class="modal-actions">
               <button type="button" class="btn-secondary" (click)="cerrarNuevoUsuario()">Cancelar</button>
               <button type="submit" class="btn-primary" [disabled]="form.invalid">Crear usuario</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div *ngIf="usuarioEditar() as usuario" class="modal-backdrop" role="presentation" (click)="cerrarEditarUsuario()">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="editar-usuario-title" (click)="$event.stopPropagation()">
+          <div class="modal-head">
+            <h3 id="editar-usuario-title">Editar usuario</h3>
+            <button type="button" class="icon-btn" (click)="cerrarEditarUsuario()" aria-label="Cerrar modal">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <form [formGroup]="editForm" (ngSubmit)="guardarEdicion(usuario.id)" class="space-y-3">
+            <div>
+              <label class="label">Nombre</label>
+              <input class="input" formControlName="nombre" />
+            </div>
+            <div>
+              <label class="label">Rol</label>
+              <select class="input" formControlName="rol">
+                <option value="ADMINISTRADOR">Administrador</option>
+                <option value="ADMINISTRADOR_SEDE">Administrador de sede</option>
+                <option value="VENDEDOR">Vendedor</option>
+                <option value="ADMINISTRATIVO_COMERCIAL">Administrativo comercial</option>
+                <option value="CALIDAD">Calidad</option>
+              </select>
+            </div>
+            <div *ngIf="sedeVisible(editForm.controls.rol.value)">
+              <label class="label">Sede{{ sedeRequerida(editForm.controls.rol.value) ? '' : ' (opcional)' }}</label>
+              <select class="input" formControlName="sede_id">
+                <option [ngValue]="null" [disabled]="sedeRequerida(editForm.controls.rol.value)">
+                  {{ sedeRequerida(editForm.controls.rol.value) ? 'Selecciona una sede' : 'Sin sede' }}
+                </option>
+                <option *ngFor="let s of sedes()" [ngValue]="s.id">{{ s.nombre }}</option>
+              </select>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-secondary" (click)="cerrarEditarUsuario()">Cancelar</button>
+              <button type="submit" class="btn-primary" [disabled]="editForm.invalid">Guardar</button>
             </div>
           </form>
         </div>
@@ -249,15 +318,19 @@ import { UsuarioService } from '@app/core/services/usuario.service';
 })
 export class UsuariosListComponent implements OnInit {
   private svc = inject(UsuarioService);
+  private sedeSvc = inject(SedeService);
   private fb = inject(FormBuilder);
   private snack = inject(MatSnackBar);
 
+  protected rolLabels = ROL_LABELS;
   protected usuarios = signal<Usuario[]>([]);
+  protected sedes = signal<Sede[]>([]);
   protected mostrarModalNuevo = signal(false);
   protected form = this.fb.nonNullable.group({
     nombre: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     rol: ['VENDEDOR', Validators.required],
+    sede_id: this.fb.control<number | null>(null),
     password: ['', [Validators.required, Validators.minLength(6)]],
     activo: [true],
   });
@@ -267,18 +340,51 @@ export class UsuariosListComponent implements OnInit {
     confirmacion: ['', [Validators.required, Validators.minLength(6)]],
   });
 
-  ngOnInit(): void { this.load(); }
+  protected usuarioEditar = signal<Usuario | null>(null);
+  protected editForm = this.fb.nonNullable.group({
+    nombre: ['', Validators.required],
+    rol: ['VENDEDOR', Validators.required],
+    sede_id: this.fb.control<number | null>(null),
+  });
+
+  ngOnInit(): void {
+    this.load();
+    this.sedeSvc.list(true).subscribe((s) => this.sedes.set(s));
+    this.form.controls.rol.valueChanges.subscribe((rol) => this.actualizarValidacionSede(this.form, rol as Rol));
+    this.editForm.controls.rol.valueChanges.subscribe((rol) => this.actualizarValidacionSede(this.editForm, rol as Rol));
+  }
+
+  protected sedeRequerida(rol: string): boolean {
+    return (ROLES_CON_SEDE_OBLIGATORIA as string[]).includes(rol);
+  }
+
+  /** El administrador global no tiene sede (el backend la ignora); el resto de roles
+   *  admiten una sede, obligatoria solo para vendedor y administrador de sede. */
+  protected sedeVisible(rol: string): boolean {
+    return rol !== 'ADMINISTRADOR';
+  }
+
+  private actualizarValidacionSede(grupo: typeof this.form | typeof this.editForm, rol: Rol) {
+    const control = grupo.controls.sede_id;
+    if (this.sedeRequerida(rol)) {
+      control.setValidators(Validators.required);
+    } else {
+      control.setValidators(null);
+      if (!this.sedeVisible(rol)) control.setValue(null);
+    }
+    control.updateValueAndValidity();
+  }
 
   load() { this.svc.list().subscribe((us) => this.usuarios.set(us)); }
 
   abrirNuevoUsuario() {
-    this.form.reset({ rol: 'VENDEDOR', activo: true, nombre: '', email: '', password: '' });
+    this.form.reset({ rol: 'VENDEDOR', activo: true, nombre: '', email: '', password: '', sede_id: null });
     this.mostrarModalNuevo.set(true);
   }
 
   cerrarNuevoUsuario() {
     this.mostrarModalNuevo.set(false);
-    this.form.reset({ rol: 'VENDEDOR', activo: true, nombre: '', email: '', password: '' });
+    this.form.reset({ rol: 'VENDEDOR', activo: true, nombre: '', email: '', password: '', sede_id: null });
   }
 
   crear() {
@@ -289,6 +395,28 @@ export class UsuariosListComponent implements OnInit {
         this.cerrarNuevoUsuario();
         this.load();
       },
+      error: (err) => this.snack.open(err?.error?.detail ?? 'Error al crear el usuario', 'Cerrar'),
+    });
+  }
+
+  abrirEditarUsuario(u: Usuario) {
+    this.usuarioEditar.set(u);
+    this.editForm.reset({ nombre: u.nombre, rol: u.rol, sede_id: u.sede_id ?? null });
+  }
+
+  cerrarEditarUsuario() {
+    this.usuarioEditar.set(null);
+  }
+
+  guardarEdicion(id: number) {
+    if (this.editForm.invalid) return;
+    this.svc.update(id, this.editForm.getRawValue() as any).subscribe({
+      next: () => {
+        this.snack.open('Usuario actualizado', 'Cerrar', { duration: 2000 });
+        this.cerrarEditarUsuario();
+        this.load();
+      },
+      error: (err) => this.snack.open(err?.error?.detail ?? 'Error al guardar', 'Cerrar'),
     });
   }
 

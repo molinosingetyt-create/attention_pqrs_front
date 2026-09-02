@@ -657,10 +657,10 @@ export class PqrsDetailComponent implements OnInit {
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
   protected puedeGestionarSeguimiento = (): boolean => this.auth.can(P.PQRS_SEGUIMIENTO_CREAR);
   protected puedeSubirEvidencia = (): boolean =>
-    this.auth.can(P.PQRS_EVIDENCIA_SUBIR) || this.auth.can(P.PQRS_EDITAR);
+    this.editMode() && (this.auth.can(P.PQRS_EVIDENCIA_SUBIR) || this.auth.can(P.PQRS_EDITAR));
 
   protected puedeEditarProductos(p: PQRSDetail): boolean {
-    return this.puedeEditarPQRS() && !this.pqrsEsTerminal(p);
+    return this.editMode() && this.puedeEditarPQRS() && !this.pqrsEsTerminal(p);
   }
 
   protected puedeEliminarProducto(p: PQRSDetail): boolean {
