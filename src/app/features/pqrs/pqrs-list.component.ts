@@ -67,9 +67,13 @@ import { P } from '@app/core/permissions';
               {{ i.nombre }}<span *ngIf="i.area_nombre"> · {{ i.area_nombre }}</span>
             </option>
           </select>
+          <select [(ngModel)]="filtros.categoria_id" (ngModelChange)="onCategoriaChange($event)" class="input">
+            <option [ngValue]="''">Todos los tipos de producto</option>
+            <option *ngFor="let c of categorias()" [ngValue]="c.id">{{ c.nombre }}</option>
+          </select>
           <select [(ngModel)]="filtros.producto_catalogo_id" (ngModelChange)="onFilterChange()" class="input">
             <option [ngValue]="''">Todos los productos</option>
-            <option *ngFor="let p of productos()" [ngValue]="p.id">
+            <option *ngFor="let p of productosFiltrados()" [ngValue]="p.id">
               {{ p.nombre }}<span *ngIf="p.categoria_nombre"> · {{ p.categoria_nombre }}</span>
             </option>
           </select>
@@ -243,6 +247,7 @@ export class PqrsListComponent implements OnInit {
     area_id: number;
     area_nombre?: string | null;
   }[]>([]);
+  protected categorias = signal<{ id: number; nombre: string }[]>([]);
   protected productos = signal<{
     id: number;
     nombre: string;
@@ -257,9 +262,17 @@ export class PqrsListComponent implements OnInit {
     ciudad: '',
     estado_area_responsable: '',
     inconformidad_id: '',
+    categoria_id: '',
     producto_catalogo_id: '',
     vendedor_id: '',
   };
+
+  protected productosFiltrados(): { id: number; nombre: string; categoria_id: number; categoria_nombre?: string | null }[] {
+    const catId = this.filtros.categoria_id;
+    const productos = this.productos();
+    if (!catId) return productos;
+    return productos.filter((p) => p.categoria_id === catId);
+  }
 
   protected puedeFiltrarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
@@ -276,11 +289,13 @@ export class PqrsListComponent implements OnInit {
       next: (opts) => {
         this.ciudades.set(opts.ciudades || []);
         this.inconformidades.set(opts.inconformidades || []);
+        this.categorias.set(opts.categorias || []);
         this.productos.set(opts.productos || []);
       },
       error: () => {
         this.ciudades.set([]);
         this.inconformidades.set([]);
+        this.categorias.set([]);
         this.productos.set([]);
       },
     });
@@ -291,6 +306,7 @@ export class PqrsListComponent implements OnInit {
     const params = { ...this.filtros, page: this.page(), size: 20 };
     if (!params.vendedor_id) delete params.vendedor_id;
     if (!params.inconformidad_id) delete params.inconformidad_id;
+    if (!params.categoria_id) delete params.categoria_id;
     if (!params.producto_catalogo_id) delete params.producto_catalogo_id;
     if (!params.ciudad) delete params.ciudad;
     if (!params.estado_area_responsable) delete params.estado_area_responsable;
@@ -304,6 +320,12 @@ export class PqrsListComponent implements OnInit {
   onFilterChange(): void {
     clearTimeout(this.debounce);
     this.debounce = setTimeout(() => { this.page.set(1); this.load(); }, 300);
+  }
+
+  onCategoriaChange(categoriaId: number | ''): void {
+    this.filtros.categoria_id = categoriaId;
+    this.filtros.producto_catalogo_id = '';
+    this.onFilterChange();
   }
 
   prev() { if (this.page() > 1) { this.page.update(p => p - 1); this.load(); } }
