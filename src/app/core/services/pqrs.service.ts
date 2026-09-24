@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '@env/environment';
 import {
   Area,
-  AnalisisResponsabilidad,
+  AnalisisProducto,
   CalificacionAtencion,
   DashboardResponse,
   DevolucionDetalle,
@@ -155,12 +155,13 @@ export class PqrsService {
     );
   }
 
-  guardarAnalisisResponsabilidad(
-    id: number,
+  guardarAnalisisProducto(
+    pqrsId: number,
+    productoId: number,
     data: { procedente: boolean; comentario: string }
   ) {
-    return this.http.put<AnalisisResponsabilidad>(
-      `${this.api}/pqrs/${id}/analisis-responsabilidad`,
+    return this.http.put<AnalisisProducto>(
+      `${this.api}/pqrs/${pqrsId}/productos/${productoId}/analisis-responsabilidad`,
       data
     );
   }

@@ -150,6 +150,9 @@ export interface ProductoPQRS {
   categoria_id?: number | null;
   categoria_nombre?: string | null;
   evidencias?: Evidencia[];
+  area_responsable_codigo?: string | null;
+  area_responsable_nombre?: string | null;
+  analisis?: AnalisisProducto | null;
 }
 
 export interface Evidencia {
@@ -179,6 +182,10 @@ export interface AnalisisResponsabilidad {
   usuario_id?: number | null;
   usuario_nombre?: string | null;
   fecha_actualizacion: string;
+}
+
+export interface AnalisisProducto extends AnalisisResponsabilidad {
+  producto_pqrs_id: number;
 }
 
 export type CalificacionAtencion = 'EXCELENTE' | 'BUENA' | 'REGULAR' | 'MALA';

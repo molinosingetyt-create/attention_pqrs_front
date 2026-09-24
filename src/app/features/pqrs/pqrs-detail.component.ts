@@ -141,7 +141,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
               <mat-icon>{{ editMode() ? 'close' : 'edit' }}</mat-icon>
               {{ editMode() ? 'Cerrar edición' : 'Editar' }}
             </button>
-            <button type="button" class="btn-secondary text-sm" (click)="descargarPdf()">
+            <button *ngIf="puedeDescargarPdf()" type="button" class="btn-secondary text-sm" (click)="descargarPdf()">
               <mat-icon>picture_as_pdf</mat-icon>
               Descargar PDF
             </button>
@@ -427,89 +427,91 @@ const emptyNuevoProducto = (): ProductoDraft => ({
                 </label>
               </div>
             </div>
+
+            <!-- Análisis y asignación de responsabilidad (por producto) -->
+            <div *ngIf="prod.id" class="mt-4 pt-4 border-t border-gray-100">
+              <h4 class="text-sm font-semibold text-gray-700 mb-1">Análisis y asignación de responsabilidad</h4>
+              <p *ngIf="prod.area_responsable_nombre" class="text-xs text-gray-500 mb-3">
+                Área responsable: <strong>{{ prod.area_responsable_nombre }}</strong>
+                <span *ngIf="!puedeGestionarAnalisisProducto(p, prod)"> · Solo usuarios de esta área pueden editar.</span>
+              </p>
+              <p *ngIf="!prod.area_responsable_nombre" class="text-xs text-gray-500 mb-3">
+                Este producto no tiene un motivo con área responsable asignada.
+              </p>
+
+              <ng-container *ngIf="prod.analisis as analisis">
+                <div *ngIf="!puedeGestionarAnalisisProducto(p, prod)" class="space-y-2 mb-2">
+                  <div class="flex flex-wrap items-center gap-3 text-sm">
+                    <span class="badge" [class.badge-closed]="analisis.procedente" [class.badge-rejected]="!analisis.procedente">
+                      {{ analisis.procedente ? 'Procedente' : 'No procedente' }}
+                    </span>
+                    <span class="text-xs text-gray-500">
+                      {{ analisis.fecha_actualizacion | date:'short' }}
+                      <span *ngIf="analisis.usuario_nombre"> · {{ analisis.usuario_nombre }}</span>
+                    </span>
+                  </div>
+                  <p class="text-sm whitespace-pre-line">{{ analisis.comentario }}</p>
+                </div>
+              </ng-container>
+
+              <form
+                *ngIf="puedeGestionarAnalisisProducto(p, prod)"
+                (ngSubmit)="guardarAnalisisProducto(prod.id!)"
+                class="space-y-3">
+                <div class="flex flex-wrap gap-6">
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      class="input-checkbox-rounded"
+                      [checked]="analisisDraft(prod.id!).procedente === true"
+                      (change)="setAnalisisProcedente(prod.id!, true)" />
+                    Procedente
+                  </label>
+                  <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      class="input-checkbox-rounded"
+                      [checked]="analisisDraft(prod.id!).procedente === false"
+                      (change)="setAnalisisProcedente(prod.id!, false)" />
+                    No procedente
+                  </label>
+                </div>
+                <p *ngIf="analisisSubmitted(prod.id!) && analisisDraft(prod.id!).procedente === null"
+                   class="text-xs text-danger">
+                  Debes seleccionar Procedente o No procedente.
+                </p>
+
+                <div>
+                  <label class="label">Comentario *</label>
+                  <textarea rows="3" class="input w-full"
+                            [ngModel]="analisisDraft(prod.id!).comentario"
+                            [ngModelOptions]="{standalone: true}"
+                            (ngModelChange)="patchAnalisisComentario(prod.id!, $event)"
+                            placeholder="Detalle del análisis y asignación de responsabilidad..."></textarea>
+                  <p *ngIf="analisisSubmitted(prod.id!) && !analisisDraft(prod.id!).comentario.trim()"
+                     class="text-xs text-danger mt-1">
+                    El comentario es obligatorio.
+                  </p>
+                </div>
+
+                <div class="flex justify-end">
+                  <button type="submit" class="btn-primary text-sm" [disabled]="analisisSavingProductoId() === prod.id">
+                    <mat-icon>save</mat-icon> Guardar análisis
+                  </button>
+                </div>
+              </form>
+
+              <p *ngIf="!puedeGestionarAnalisisProducto(p, prod) && !prod.analisis"
+                 class="text-sm text-gray-500">
+                Aún no se ha registrado el análisis de responsabilidad.
+              </p>
+            </div>
           </div>
 
           <p *ngIf="!p.productos.length" class="text-center text-gray-400 text-sm py-3">
             Sin productos.
           </p>
         </div>
-      </div>
-
-      <!-- Análisis y asignación de responsabilidad -->
-      <div class="card">
-        <h3 class="font-semibold mb-2">Análisis y Asignación de responsabilidad</h3>
-        <p *ngIf="p.inconformidad?.area as area" class="text-xs text-gray-500 mb-4">
-          Área responsable: <strong>{{ area.nombre }}</strong>
-          <span *ngIf="!puedeGestionarAnalisis(p)"> · Solo usuarios de esta área pueden editar.</span>
-        </p>
-        <p *ngIf="!p.inconformidad?.area" class="text-sm text-gray-500 mb-4">
-          Esta PQRS no tiene un motivo con área responsable asignada.
-        </p>
-
-        <ng-container *ngIf="p.analisis_responsabilidad as analisis">
-          <div *ngIf="!puedeGestionarAnalisis(p)" class="space-y-3 mb-2">
-            <div class="flex flex-wrap gap-4 text-sm">
-              <span class="badge" [class.badge-closed]="analisis.procedente" [class.badge-rejected]="!analisis.procedente">
-                {{ analisis.procedente ? 'Procedente' : 'No procedente' }}
-              </span>
-              <span class="text-xs text-gray-500">
-                {{ analisis.fecha_actualizacion | date:'short' }}
-                <span *ngIf="analisis.usuario_nombre"> · {{ analisis.usuario_nombre }}</span>
-              </span>
-            </div>
-            <p class="text-sm whitespace-pre-line">{{ analisis.comentario }}</p>
-          </div>
-        </ng-container>
-
-        <form
-          *ngIf="puedeGestionarAnalisis(p)"
-          [formGroup]="analisisForm"
-          (ngSubmit)="guardarAnalisis()"
-          class="space-y-4">
-          <div class="flex flex-wrap gap-6">
-            <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                class="input-checkbox-rounded"
-                [checked]="analisisForm.get('procedente')?.value === true"
-                (change)="setProcedente(true)" />
-              Procedente
-            </label>
-            <label class="inline-flex items-center gap-2 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                class="input-checkbox-rounded"
-                [checked]="analisisForm.get('procedente')?.value === false"
-                (change)="setProcedente(false)" />
-              No procedente
-            </label>
-          </div>
-          <p *ngIf="analisisSubmitted() && analisisForm.get('procedente')?.invalid"
-             class="text-xs text-danger">
-            Debes seleccionar Procedente o No procedente.
-          </p>
-
-          <div>
-            <label class="label">Comentario *</label>
-            <textarea rows="4" class="input w-full" formControlName="comentario"
-                      placeholder="Detalle del análisis y asignación de responsabilidad..."></textarea>
-            <p *ngIf="analisisSubmitted() && analisisForm.get('comentario')?.invalid"
-               class="text-xs text-danger mt-1">
-              El comentario es obligatorio.
-            </p>
-          </div>
-
-          <div class="flex justify-end">
-            <button type="submit" class="btn-primary" [disabled]="analisisSaving()">
-              <mat-icon>save</mat-icon> Guardar análisis
-            </button>
-          </div>
-        </form>
-
-        <p *ngIf="!puedeGestionarAnalisis(p) && !p.analisis_responsabilidad"
-           class="text-sm text-gray-500">
-          Aún no se ha registrado el análisis de responsabilidad.
-        </p>
       </div>
 
       <!-- Seguimientos -->
@@ -638,8 +640,9 @@ export class PqrsDetailComponent implements OnInit {
 
   protected pqrs = signal<PQRSDetail | null>(null);
   protected editMode = signal(false);
-  protected analisisSubmitted = signal(false);
-  protected analisisSaving = signal(false);
+  protected analisisDrafts = signal<Record<number, { procedente: boolean | null; comentario: string }>>({});
+  protected analisisSubmittedIds = signal<Set<number>>(new Set());
+  protected analisisSavingProductoId = signal<number | null>(null);
   protected satisfaccionSubmitted = signal(false);
   protected satisfaccionSaving = signal(false);
   protected savingProductoId = signal<number | null>(null);
@@ -655,6 +658,7 @@ export class PqrsDetailComponent implements OnInit {
   protected inconformidades = signal<Inconformidad[]>([]);
 
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
+  protected puedeDescargarPdf = (): boolean => this.auth.can(P.PQRS_DESCARGAR_PDF);
   protected puedeGestionarSeguimiento = (): boolean => this.auth.can(P.PQRS_SEGUIMIENTO_CREAR);
   protected puedeSubirEvidencia = (): boolean =>
     this.editMode() && (this.auth.can(P.PQRS_EVIDENCIA_SUBIR) || this.auth.can(P.PQRS_EDITAR));
@@ -738,9 +742,12 @@ export class PqrsDetailComponent implements OnInit {
     }
   }
 
-  protected puedeGestionarAnalisis(p: PQRSDetail): boolean {
+  protected puedeGestionarAnalisisProducto(
+    p: PQRSDetail,
+    prod: PQRSDetail['productos'][number]
+  ): boolean {
     if (this.pqrsEsTerminal(p)) return false;
-    const areaCodigo = p.inconformidad?.area?.codigo;
+    const areaCodigo = prod.area_responsable_codigo;
     const rol = this.auth.currentUser()?.rol;
     return !!areaCodigo && !!rol && rol === areaCodigo;
   }
@@ -771,11 +778,6 @@ export class PqrsDetailComponent implements OnInit {
     descripcion: [''],
   });
 
-  protected analisisForm = this.fb.group({
-    procedente: [null as boolean | null, Validators.required],
-    comentario: ['', Validators.required],
-  });
-
   protected satisfaccionForm = this.fb.group({
     expectativa_cumplida: [null as boolean | null, Validators.required],
     comentarios: [''],
@@ -802,7 +804,7 @@ export class PqrsDetailComponent implements OnInit {
       this.pqrs.set(p);
       this.resetEditForm(p);
       this.resetProductoDrafts(p);
-      this.resetAnalisisForm(p);
+      this.resetAnalisisDrafts(p);
       this.resetSatisfaccionForm(p);
     });
   }
@@ -948,47 +950,74 @@ export class PqrsDetailComponent implements OnInit {
       });
   }
 
-  protected setProcedente(value: boolean): void {
-    this.analisisForm.patchValue({ procedente: value });
+  protected analisisDraft(productoId: number): { procedente: boolean | null; comentario: string } {
+    return this.analisisDrafts()[productoId] ?? { procedente: null, comentario: '' };
   }
 
-  protected resetAnalisisForm(p: PQRSDetail): void {
-    const a = p.analisis_responsabilidad;
-    this.analisisForm.reset({
-      procedente: a ? a.procedente : null,
-      comentario: a?.comentario ?? '',
-    });
-    this.analisisSubmitted.set(false);
+  protected setAnalisisProcedente(productoId: number, value: boolean): void {
+    const current = this.analisisDraft(productoId);
+    this.analisisDrafts.update((m) => ({
+      ...m,
+      [productoId]: { ...current, procedente: value },
+    }));
   }
 
-  protected guardarAnalisis(): void {
-    this.analisisSubmitted.set(true);
-    if (this.analisisForm.invalid) {
-      this.analisisForm.markAllAsTouched();
-      return;
+  protected patchAnalisisComentario(productoId: number, value: string): void {
+    const current = this.analisisDraft(productoId);
+    this.analisisDrafts.update((m) => ({
+      ...m,
+      [productoId]: { ...current, comentario: value },
+    }));
+  }
+
+  protected analisisSubmitted(productoId: number): boolean {
+    return this.analisisSubmittedIds().has(productoId);
+  }
+
+  protected resetAnalisisDrafts(p: PQRSDetail): void {
+    const drafts: Record<number, { procedente: boolean | null; comentario: string }> = {};
+    for (const prod of p.productos) {
+      if (!prod.id) continue;
+      const a = prod.analisis;
+      drafts[prod.id] = {
+        procedente: a ? a.procedente : null,
+        comentario: a?.comentario ?? '',
+      };
     }
+    this.analisisDrafts.set(drafts);
+    this.analisisSubmittedIds.set(new Set());
+  }
+
+  protected guardarAnalisisProducto(productoId: number): void {
+    this.analisisSubmittedIds.update((s) => new Set(s).add(productoId));
     const p = this.pqrs();
-    if (!p || !this.puedeGestionarAnalisis(p)) return;
+    if (!p) return;
+    const prod = p.productos.find((x) => x.id === productoId);
+    if (!prod || !this.puedeGestionarAnalisisProducto(p, prod)) return;
 
-    const raw = this.analisisForm.getRawValue();
-    if (raw.procedente === null || raw.procedente === undefined) return;
+    const draft = this.analisisDraft(productoId);
+    if (draft.procedente === null || draft.procedente === undefined) return;
+    const comentario = (draft.comentario || '').trim();
+    if (!comentario) return;
 
-    this.analisisSaving.set(true);
-    this.svc.guardarAnalisisResponsabilidad(p.id, {
-      procedente: raw.procedente,
-      comentario: (raw.comentario || '').trim(),
-    }).subscribe({
-      next: () => {
-        this.snack.open('Análisis guardado', 'Cerrar', { duration: 2000 });
-        this.analisisSaving.set(false);
-        this.load(p.id);
-      },
-      error: (e) => {
-        this.analisisSaving.set(false);
-        const msg = e?.error?.detail || 'No se pudo guardar el análisis';
-        this.snack.open(String(msg), 'Cerrar', { duration: 3500 });
-      },
-    });
+    this.analisisSavingProductoId.set(productoId);
+    this.svc
+      .guardarAnalisisProducto(p.id, productoId, {
+        procedente: draft.procedente,
+        comentario,
+      })
+      .subscribe({
+        next: () => {
+          this.snack.open('Análisis guardado', 'Cerrar', { duration: 2000 });
+          this.analisisSavingProductoId.set(null);
+          this.load(p.id);
+        },
+        error: (e) => {
+          this.analisisSavingProductoId.set(null);
+          const msg = e?.error?.detail || 'No se pudo guardar el análisis';
+          this.snack.open(String(msg), 'Cerrar', { duration: 3500 });
+        },
+      });
   }
 
   protected resetSatisfaccionForm(p: PQRSDetail): void {
@@ -1121,7 +1150,7 @@ export class PqrsDetailComponent implements OnInit {
 
   descargarPdf(): void {
     const p = this.pqrs();
-    if (!p) return;
+    if (!p || !this.puedeDescargarPdf()) return;
     this.svc.descargarPdf(p.id).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);

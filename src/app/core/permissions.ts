@@ -16,6 +16,7 @@ export const P = {
   PQRS_EDITAR: 'pqrs.editar',
   PQRS_ELIMINAR: 'pqrs.eliminar',
   PQRS_EXPORTAR: 'pqrs.exportar',
+  PQRS_DESCARGAR_PDF: 'pqrs.descargar_pdf',
   PQRS_SEGUIMIENTO_CREAR: 'pqrs.seguimiento.crear',
   PQRS_EVIDENCIA_SUBIR: 'pqrs.evidencia.subir',
   PQRS_FILTRAR_VENDEDOR: 'pqrs.filtrar_vendedor',

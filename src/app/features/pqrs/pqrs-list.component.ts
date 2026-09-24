@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,40 @@ import { AuthService } from '@app/core/services/auth.service';
 import { PQRSListItem, Usuario } from '@app/core/models/api.models';
 import { P } from '@app/core/permissions';
 
+const TIPO_LABELS: Record<string, string> = {
+  QUEJA: 'Queja',
+  RECLAMO: 'Reclamo',
+  SUGERENCIA: 'Sugerencia',
+  PETICION: 'Petición',
+  OTRO: 'Otro',
+};
+
+const ESTADO_LABELS: Record<string, string> = {
+  ABIERTA: 'Abierta',
+  EN_PROCESO: 'En proceso',
+  CERRADA: 'Cerrada',
+  RECHAZADA: 'Rechazada',
+};
+
+const ESTADO_AREA_LABELS: Record<string, string> = {
+  'NO GESTIONADO': 'No gestionado',
+  PROCEDENTE: 'Procedente',
+  'NO PROCEDENTE': 'No procedente',
+};
+
+const filtrosVacios = () => ({
+  q: '',
+  estado: '',
+  tipo: '',
+  fecha_desde: '',
+  ciudad: '',
+  estado_area_responsable: '',
+  inconformidad_id: '' as number | '',
+  categoria_id: '' as number | '',
+  producto_catalogo_id: '' as number | '',
+  vendedor_id: '' as number | '',
+});
+
 @Component({
   selector: 'app-pqrs-list',
   standalone: true,
@@ -20,7 +54,7 @@ import { P } from '@app/core/permissions';
       <div class="page-head">
         <h2>PQRS</h2>
         <div class="actions">
-          <button class="btn-secondary" (click)="exportar()">
+          <button *ngIf="puedeExportarExcel()" class="btn-secondary" (click)="exportar()">
             <mat-icon>download</mat-icon>
             <span class="hidden sm:inline">Exportar</span> Excel
           </button>
@@ -32,60 +66,34 @@ import { P } from '@app/core/permissions';
       </div>
 
       <div class="card">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          <input [(ngModel)]="filtros.q" (ngModelChange)="onFilterChange()"
-                 class="input" placeholder="Buscar (radicado, factura, cliente, NIT)..." />
-          <select [(ngModel)]="filtros.tipo" (ngModelChange)="onFilterChange()" class="input">
-            <option value="">Todos los tipos</option>
-            <option value="QUEJA">Queja</option>
-            <option value="RECLAMO">Reclamo</option>
-            <option value="SUGERENCIA">Sugerencia</option>
-            <option value="PETICION">Petición</option>
-            <option value="OTRO">Otro</option>
-          </select>
-          <select [(ngModel)]="filtros.estado" (ngModelChange)="onFilterChange()" class="input">
-            <option value="">Todos los estados</option>
-            <option value="ABIERTA">Abierta</option>
-            <option value="EN_PROCESO">En proceso</option>
-            <option value="CERRADA">Cerrada</option>
-            <option value="RECHAZADA">Rechazada</option>
-          </select>
-          <input type="date" [(ngModel)]="filtros.fecha_desde" (ngModelChange)="onFilterChange()" class="input" />
-          <select [(ngModel)]="filtros.ciudad" (ngModelChange)="onFilterChange()" class="input">
-            <option value="">Todas las ciudades</option>
-            <option *ngFor="let c of ciudades()" [ngValue]="c">{{ c }}</option>
-          </select>
-          <select [(ngModel)]="filtros.estado_area_responsable" (ngModelChange)="onFilterChange()" class="input">
-            <option value="">Todos los estados de área resp.</option>
-            <option value="NO GESTIONADO">No gestionado</option>
-            <option value="PROCEDENTE">Procedente</option>
-            <option value="NO PROCEDENTE">No procedente</option>
-          </select>
-          <select [(ngModel)]="filtros.inconformidad_id" (ngModelChange)="onFilterChange()" class="input">
-            <option [ngValue]="''">Todos los motivos</option>
-            <option *ngFor="let i of inconformidades()" [ngValue]="i.id">
-              {{ i.nombre }}<span *ngIf="i.area_nombre"> · {{ i.area_nombre }}</span>
-            </option>
-          </select>
-          <select [(ngModel)]="filtros.categoria_id" (ngModelChange)="onCategoriaChange($event)" class="input">
-            <option [ngValue]="''">Todos los tipos de producto</option>
-            <option *ngFor="let c of categorias()" [ngValue]="c.id">{{ c.nombre }}</option>
-          </select>
-          <select [(ngModel)]="filtros.producto_catalogo_id" (ngModelChange)="onFilterChange()" class="input">
-            <option [ngValue]="''">Todos los productos</option>
-            <option *ngFor="let p of productosFiltrados()" [ngValue]="p.id">
-              {{ p.nombre }}<span *ngIf="p.categoria_nombre"> · {{ p.categoria_nombre }}</span>
-            </option>
-          </select>
-          <select *ngIf="puedeFiltrarVendedor()"
-                  [(ngModel)]="filtros.vendedor_id"
-                  (ngModelChange)="onFilterChange()"
-                  class="input sm:col-span-2">
-            <option [ngValue]="''">Todos los vendedores</option>
-            <option *ngFor="let v of vendedores()" [ngValue]="v.id">
-              {{ v.nombre }} · {{ v.email }}
-            </option>
-          </select>
+        <div class="filtros-bar mb-4">
+          <button type="button" class="btn-secondary shrink-0" (click)="abrirFiltros()">
+            <mat-icon>filter_list</mat-icon>
+            Filtrar
+            <span *ngIf="filtrosActivos().length" class="filtros-count">{{ filtrosActivos().length }}</span>
+          </button>
+
+          <span *ngIf="!filtrosActivos().length" class="text-sm text-gray-500">
+            Sin filtros aplicados.
+          </span>
+
+          <div *ngIf="filtrosActivos().length" class="filtros-chips">
+            <span *ngFor="let f of filtrosActivos()" class="filtro-chip">
+              <span class="text-gray-500">{{ f.etiqueta }}:</span>
+              <span class="font-medium truncate">{{ f.valor }}</span>
+              <button type="button"
+                      class="filtro-chip-x"
+                      [attr.aria-label]="'Quitar filtro ' + f.etiqueta"
+                      (click)="quitarFiltro(f.clave)">
+                <mat-icon>close</mat-icon>
+              </button>
+            </span>
+            <button type="button"
+                    class="text-sm text-brand-dark underline underline-offset-2"
+                    (click)="limpiarFiltros()">
+              Limpiar todo
+            </button>
+          </div>
         </div>
 
         <!-- Vista tabla (tablet+) -->
@@ -143,7 +151,8 @@ import { P } from '@app/core/permissions';
                        aria-label="Editar / Gestionar">
                       <mat-icon>edit</mat-icon>
                     </a>
-                    <button type="button"
+                    <button *ngIf="puedeDescargarPdf()"
+                            type="button"
                             class="icon-btn icon-view"
                             matTooltip="Descargar documentos PDF"
                             aria-label="Descargar PDF PQRS"
@@ -225,15 +234,250 @@ import { P } from '@app/core/permissions';
           </div>
         </div>
       </div>
+
+      <div *ngIf="mostrarFiltros()" class="modal-backdrop" role="presentation" (click)="cerrarFiltros()">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="filtros-pqrs-title"
+             (click)="$event.stopPropagation()">
+          <div class="modal-head">
+            <h3 id="filtros-pqrs-title">Filtrar PQRS</h3>
+            <button type="button" class="icon-btn" (click)="cerrarFiltros()" aria-label="Cerrar modal">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <form (ngSubmit)="aplicarFiltros()">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="sm:col-span-2">
+                <label class="label" for="f-q">Búsqueda</label>
+                <input id="f-q" name="q" [(ngModel)]="borrador.q" class="input"
+                       placeholder="Radicado, factura, cliente o NIT" />
+              </div>
+
+              <div>
+                <label class="label" for="f-tipo">Tipo</label>
+                <select id="f-tipo" name="tipo" [(ngModel)]="borrador.tipo" class="input">
+                  <option value="">Todos los tipos</option>
+                  <option value="QUEJA">Queja</option>
+                  <option value="RECLAMO">Reclamo</option>
+                  <option value="SUGERENCIA">Sugerencia</option>
+                  <option value="PETICION">Petición</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-estado">Estado</label>
+                <select id="f-estado" name="estado" [(ngModel)]="borrador.estado" class="input">
+                  <option value="">Todos los estados</option>
+                  <option value="ABIERTA">Abierta</option>
+                  <option value="EN_PROCESO">En proceso</option>
+                  <option value="CERRADA">Cerrada</option>
+                  <option value="RECHAZADA">Rechazada</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-fecha">Creadas desde</label>
+                <input id="f-fecha" name="fecha_desde" type="date" [(ngModel)]="borrador.fecha_desde" class="input" />
+              </div>
+
+              <div>
+                <label class="label" for="f-ciudad">Ciudad</label>
+                <select id="f-ciudad" name="ciudad" [(ngModel)]="borrador.ciudad" class="input">
+                  <option value="">Todas las ciudades</option>
+                  <option *ngFor="let c of ciudades()" [ngValue]="c">{{ c }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-estado-area">Estado del área responsable</label>
+                <select id="f-estado-area" name="estado_area_responsable"
+                        [(ngModel)]="borrador.estado_area_responsable" class="input">
+                  <option value="">Todos</option>
+                  <option value="NO GESTIONADO">No gestionado</option>
+                  <option value="PROCEDENTE">Procedente</option>
+                  <option value="NO PROCEDENTE">No procedente</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-motivo">Motivo</label>
+                <select id="f-motivo" name="inconformidad_id" [(ngModel)]="borrador.inconformidad_id" class="input">
+                  <option [ngValue]="''">Todos los motivos</option>
+                  <option *ngFor="let i of inconformidades()" [ngValue]="i.id">
+                    {{ i.nombre }}<span *ngIf="i.area_nombre"> · {{ i.area_nombre }}</span>
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-categoria">Tipo de producto</label>
+                <select id="f-categoria" name="categoria_id" [(ngModel)]="borrador.categoria_id"
+                        (ngModelChange)="onCategoriaChange($event)" class="input">
+                  <option [ngValue]="''">Todos los tipos de producto</option>
+                  <option *ngFor="let c of categorias()" [ngValue]="c.id">{{ c.nombre }}</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="label" for="f-producto">Producto</label>
+                <select id="f-producto" name="producto_catalogo_id"
+                        [(ngModel)]="borrador.producto_catalogo_id" class="input">
+                  <option [ngValue]="''">Todos los productos</option>
+                  <option *ngFor="let p of productosFiltrados()" [ngValue]="p.id">
+                    {{ p.nombre }}<span *ngIf="p.categoria_nombre"> · {{ p.categoria_nombre }}</span>
+                  </option>
+                </select>
+              </div>
+
+              <div *ngIf="puedeFiltrarVendedor()" class="sm:col-span-2">
+                <label class="label" for="f-vendedor">Vendedor</label>
+                <select id="f-vendedor" name="vendedor_id" [(ngModel)]="borrador.vendedor_id" class="input">
+                  <option [ngValue]="''">Todos los vendedores</option>
+                  <option *ngFor="let v of vendedores()" [ngValue]="v.id">
+                    {{ v.nombre }} · {{ v.email }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" (click)="limpiarBorrador()">Limpiar</button>
+              <div class="flex gap-2">
+                <button type="button" class="btn-secondary" (click)="cerrarFiltros()">Cancelar</button>
+                <button type="submit" class="btn-primary">Aplicar filtros</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   `,
+  styles: [`
+    .filtros-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+    }
+
+    .filtros-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.25rem;
+      height: 1.25rem;
+      padding: 0 0.35rem;
+      border-radius: 999px;
+      background: var(--em-primary, #0066cc);
+      color: #fff;
+      font-size: 0.75rem;
+      line-height: 1;
+    }
+
+    .filtros-chips {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .filtro-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      max-width: 18rem;
+      padding: 0.2rem 0.35rem 0.2rem 0.6rem;
+      border: 1px solid var(--em-border);
+      border-radius: 999px;
+      background: var(--em-surface);
+      font-size: 0.8125rem;
+      white-space: nowrap;
+    }
+
+    .filtro-chip-x {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      color: var(--em-muted, #6b7280);
+      padding: 0;
+    }
+
+    .filtro-chip-x:hover {
+      color: var(--em-danger, #b91c1c);
+    }
+
+    .filtro-chip-x mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(16, 56, 71, 0.45);
+      backdrop-filter: blur(2px);
+    }
+
+    .modal-card {
+      width: min(100%, 44rem);
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+      background: var(--em-surface);
+      border: 1px solid var(--em-border);
+      border-radius: var(--em-radius);
+      box-shadow: var(--em-shadow-md);
+      padding: 1.25rem;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .modal-head h3 {
+      margin: 0;
+      font-size: 1.125rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .modal-backdrop {
+        align-items: flex-end;
+        padding: 0.75rem;
+      }
+
+      .modal-card {
+        width: 100%;
+      }
+    }
+  `],
 })
 export class PqrsListComponent implements OnInit {
   private svc = inject(PqrsService);
   private usuarios = inject(UsuarioService);
   private auth = inject(AuthService);
   private snack = inject(MatSnackBar);
-  private debounce: any;
 
   protected items = signal<PQRSListItem[]>([]);
   protected total = signal(0);
@@ -254,29 +498,99 @@ export class PqrsListComponent implements OnInit {
     categoria_id: number;
     categoria_nombre?: string | null;
   }[]>([]);
-  protected filtros: any = {
-    q: '',
-    estado: '',
-    tipo: '',
-    fecha_desde: '',
-    ciudad: '',
-    estado_area_responsable: '',
-    inconformidad_id: '',
-    categoria_id: '',
-    producto_catalogo_id: '',
-    vendedor_id: '',
-  };
+  /** Filtros aplicados al listado. */
+  protected filtros: any = filtrosVacios();
+  /** Copia editable dentro del modal; se vuelca a `filtros` al aplicar. */
+  protected borrador: any = filtrosVacios();
+  protected mostrarFiltros = signal(false);
 
   protected productosFiltrados(): { id: number; nombre: string; categoria_id: number; categoria_nombre?: string | null }[] {
-    const catId = this.filtros.categoria_id;
+    const catId = this.borrador.categoria_id;
     const productos = this.productos();
     if (!catId) return productos;
     return productos.filter((p) => p.categoria_id === catId);
   }
 
+  /** Filtros con valor, para los chips de la barra superior. */
+  protected filtrosActivos(): { clave: string; etiqueta: string; valor: string }[] {
+    const f = this.filtros;
+    const chips: { clave: string; etiqueta: string; valor: string }[] = [];
+    if (f.q) chips.push({ clave: 'q', etiqueta: 'Búsqueda', valor: f.q });
+    if (f.tipo) chips.push({ clave: 'tipo', etiqueta: 'Tipo', valor: TIPO_LABELS[f.tipo] ?? f.tipo });
+    if (f.estado) chips.push({ clave: 'estado', etiqueta: 'Estado', valor: ESTADO_LABELS[f.estado] ?? f.estado });
+    if (f.fecha_desde) chips.push({ clave: 'fecha_desde', etiqueta: 'Desde', valor: f.fecha_desde });
+    if (f.ciudad) chips.push({ clave: 'ciudad', etiqueta: 'Ciudad', valor: f.ciudad });
+    if (f.estado_area_responsable) {
+      chips.push({
+        clave: 'estado_area_responsable',
+        etiqueta: 'Estado área resp.',
+        valor: ESTADO_AREA_LABELS[f.estado_area_responsable] ?? f.estado_area_responsable,
+      });
+    }
+    if (f.inconformidad_id) {
+      const i = this.inconformidades().find((x) => x.id === f.inconformidad_id);
+      chips.push({ clave: 'inconformidad_id', etiqueta: 'Motivo', valor: i?.nombre ?? String(f.inconformidad_id) });
+    }
+    if (f.categoria_id) {
+      const c = this.categorias().find((x) => x.id === f.categoria_id);
+      chips.push({ clave: 'categoria_id', etiqueta: 'Tipo de producto', valor: c?.nombre ?? String(f.categoria_id) });
+    }
+    if (f.producto_catalogo_id) {
+      const p = this.productos().find((x) => x.id === f.producto_catalogo_id);
+      chips.push({ clave: 'producto_catalogo_id', etiqueta: 'Producto', valor: p?.nombre ?? String(f.producto_catalogo_id) });
+    }
+    if (f.vendedor_id) {
+      const v = this.vendedores().find((x) => x.id === f.vendedor_id);
+      chips.push({ clave: 'vendedor_id', etiqueta: 'Vendedor', valor: v?.nombre ?? String(f.vendedor_id) });
+    }
+    return chips;
+  }
+
+  abrirFiltros(): void {
+    this.borrador = { ...this.filtros };
+    this.mostrarFiltros.set(true);
+  }
+
+  cerrarFiltros(): void {
+    this.mostrarFiltros.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.mostrarFiltros()) this.cerrarFiltros();
+  }
+
+  /** Vacía el formulario del modal sin aplicar todavía. */
+  limpiarBorrador(): void {
+    this.borrador = filtrosVacios();
+  }
+
+  aplicarFiltros(): void {
+    this.filtros = { ...this.borrador };
+    this.mostrarFiltros.set(false);
+    this.page.set(1);
+    this.load();
+  }
+
+  /** Quita un chip de la barra y recarga de inmediato. */
+  quitarFiltro(clave: string): void {
+    this.filtros[clave] = '';
+    if (clave === 'categoria_id') this.filtros.producto_catalogo_id = '';
+    this.page.set(1);
+    this.load();
+  }
+
+  limpiarFiltros(): void {
+    this.filtros = filtrosVacios();
+    this.page.set(1);
+    this.load();
+  }
+
   protected puedeFiltrarVendedor = (): boolean => this.auth.can(P.PQRS_FILTRAR_VENDEDOR);
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
   protected puedeEliminarPQRS = (): boolean => this.auth.can(P.PQRS_ELIMINAR);
+  protected puedeExportarExcel = (): boolean => this.auth.can(P.PQRS_EXPORTAR);
+  protected puedeDescargarPdf = (): boolean => this.auth.can(P.PQRS_DESCARGAR_PDF);
 
   ngOnInit(): void {
     if (this.puedeFiltrarVendedor()) {
@@ -317,21 +631,17 @@ export class PqrsListComponent implements OnInit {
     });
   }
 
-  onFilterChange(): void {
-    clearTimeout(this.debounce);
-    this.debounce = setTimeout(() => { this.page.set(1); this.load(); }, 300);
-  }
-
+  /** Al cambiar el tipo de producto en el modal, el producto deja de ser válido. */
   onCategoriaChange(categoriaId: number | ''): void {
-    this.filtros.categoria_id = categoriaId;
-    this.filtros.producto_catalogo_id = '';
-    this.onFilterChange();
+    this.borrador.categoria_id = categoriaId;
+    this.borrador.producto_catalogo_id = '';
   }
 
   prev() { if (this.page() > 1) { this.page.update(p => p - 1); this.load(); } }
   next() { if (this.page() < this.pages()) { this.page.update(p => p + 1); this.load(); } }
 
   exportar(): void {
+    if (!this.puedeExportarExcel()) return;
     this.svc.exportExcel(this.filtros).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
@@ -361,6 +671,7 @@ export class PqrsListComponent implements OnInit {
   }
 
   descargarPdf(id: number): void {
+    if (!this.puedeDescargarPdf()) return;
     this.svc.descargarPdf(id).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
