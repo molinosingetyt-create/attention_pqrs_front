@@ -746,17 +746,24 @@ export class PqrsDetailComponent implements OnInit {
     p: PQRSDetail,
     prod: PQRSDetail['productos'][number]
   ): boolean {
-    if (this.pqrsEsTerminal(p)) return false;
+    if (p.estado === 'RECHAZADA') return false;
     const areaCodigo = prod.area_responsable_codigo;
     const rol = this.auth.currentUser()?.rol;
-    return !!areaCodigo && !!rol && rol === areaCodigo;
+    if (!areaCodigo || !rol) return false;
+    if (rol === 'ADMINISTRADOR') return true;
+    // Administrativo comercial y administrador de sede: todas las áreas excepto CALIDAD.
+    if (rol === 'ADMINISTRATIVO_COMERCIAL' || rol === 'ADMINISTRADOR_SEDE') {
+      return areaCodigo !== 'CALIDAD';
+    }
+    // En PQRS cerrada, del resto de roles solo CALIDAD sigue gestionando su área.
+    if (p.estado === 'CERRADA' && rol !== 'CALIDAD') return false;
+    return rol === areaCodigo;
   }
 
   protected puedeGestionarSatisfaccion(p: PQRSDetail): boolean {
     if (this.pqrsEsTerminal(p)) return false;
-    if (this.auth.can(P.PQRS_SEGUIMIENTO_CREAR) || this.auth.can(P.PQRS_EDITAR)) return true;
-    const uid = this.auth.currentUser()?.id;
-    return !!uid && p.vendedor?.id === uid;
+    const rol = this.auth.currentUser()?.rol;
+    return rol === 'ADMINISTRADOR' || rol === 'ADMINISTRATIVO_COMERCIAL' || rol === 'ADMINISTRADOR_SEDE';
   }
 
   protected evidenciaProducto(prod: PQRSDetail['productos'][number], tipo: TipoEvidencia) {
