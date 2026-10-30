@@ -20,6 +20,7 @@ export const P = {
   PQRS_SEGUIMIENTO_CREAR: 'pqrs.seguimiento.crear',
   PQRS_EVIDENCIA_SUBIR: 'pqrs.evidencia.subir',
   PQRS_FILTRAR_VENDEDOR: 'pqrs.filtrar_vendedor',
+  PQRS_APROBAR_BOCETO: 'pqrs.aprobar_boceto',
 
   DEVOLUCIONES_LISTAR: 'devoluciones.listar',
   DEVOLUCIONES_VALIDAR: 'devoluciones.validar',

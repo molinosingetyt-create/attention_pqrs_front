@@ -3,7 +3,8 @@ export type Rol =
   | 'ADMINISTRADOR_SEDE'
   | 'VENDEDOR'
   | 'ADMINISTRATIVO_COMERCIAL'
-  | 'CALIDAD';
+  | 'CALIDAD'
+  | 'LOGISTICA';
 
 export const ROL_LABELS: Record<Rol, string> = {
   ADMINISTRADOR: 'Administrador',
@@ -11,6 +12,7 @@ export const ROL_LABELS: Record<Rol, string> = {
   VENDEDOR: 'Vendedor',
   ADMINISTRATIVO_COMERCIAL: 'Administrativo comercial',
   CALIDAD: 'Calidad',
+  LOGISTICA: 'Logística',
 };
 
 /** Roles que requieren tener una sede asignada. */
@@ -30,7 +32,7 @@ export type TipoPQRS =
   | 'PETICION'
   | 'OTRO';
 
-export type EstadoPQRS = 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'RECHAZADA';
+export type EstadoPQRS = 'BOCETO' | 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'RECHAZADA';
 export type EstadoAreaResponsable = 'NO GESTIONADO' | 'PROCEDENTE' | 'NO PROCEDENTE';
 
 export interface Usuario {

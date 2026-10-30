@@ -75,11 +75,17 @@ const emptyNuevoProducto = (): ProductoDraft => ({
           <div class="field">
             <label class="block text-sm font-medium mb-1">Estado</label>
             <select class="input" formControlName="estado">
-              <option value="ABIERTA">Abierta</option>
-              <option value="EN_PROCESO">En proceso</option>
-              <option value="CERRADA">Cerrada</option>
-              <option value="RECHAZADA">Rechazada</option>
+              <option *ngIf="p.estado === 'BOCETO'" value="BOCETO">Boceto</option>
+              <option value="ABIERTA" [disabled]="!puedeSalirDeBoceto(p)">Abierta</option>
+              <option value="EN_PROCESO" [disabled]="p.estado === 'BOCETO'">En proceso</option>
+              <option value="CERRADA" [disabled]="p.estado === 'BOCETO'">Cerrada</option>
+              <option value="RECHAZADA" [disabled]="!puedeSalirDeBoceto(p)">Rechazada</option>
             </select>
+            <p *ngIf="p.estado === 'BOCETO'" class="text-xs text-gray-500 mt-1">
+              {{ puedeAprobarBoceto()
+                ? 'Al pasarla a Abierta se notificará por correo al área responsable.'
+                : 'Solo un administrador puede pasar este boceto a Abierta.' }}
+            </p>
           </div>
 
           <div class="field">
@@ -146,6 +152,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
               Descargar PDF
             </button>
             <span class="badge text-base"
+                  [class.badge-pending]="p.estado === 'BOCETO'"
                   [class.badge-open]="p.estado === 'ABIERTA'"
                   [class.badge-progress]="p.estado === 'EN_PROCESO'"
                   [class.badge-closed]="p.estado === 'CERRADA'"
@@ -523,10 +530,11 @@ const emptyNuevoProducto = (): ProductoDraft => ({
         <form *ngIf="puedeGestionarSeguimiento() && !pqrsEsTerminal(p)" [formGroup]="segForm" (ngSubmit)="addSeguimiento()"
               class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
           <select class="input" formControlName="estado">
-            <option value="ABIERTA">Abierta</option>
-            <option value="EN_PROCESO">En proceso</option>
-            <option value="CERRADA">Cerrada</option>
-            <option value="RECHAZADA">Rechazada</option>
+            <option *ngIf="p.estado === 'BOCETO'" value="BOCETO">Boceto</option>
+            <option value="ABIERTA" [disabled]="!puedeSalirDeBoceto(p)">Abierta</option>
+            <option value="EN_PROCESO" [disabled]="p.estado === 'BOCETO'">En proceso</option>
+            <option value="CERRADA" [disabled]="p.estado === 'BOCETO'">Cerrada</option>
+            <option value="RECHAZADA" [disabled]="!puedeSalirDeBoceto(p)">Rechazada</option>
           </select>
           <input class="input sm:col-span-1 lg:col-span-2" formControlName="descripcion"
                  placeholder="Descripción del seguimiento..." />
@@ -541,6 +549,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
             <div class="timeline-dot"></div>
             <div class="flex items-center gap-2 text-sm">
               <span class="badge"
+                    [class.badge-pending]="s.estado === 'BOCETO'"
                     [class.badge-open]="s.estado === 'ABIERTA'"
                     [class.badge-progress]="s.estado === 'EN_PROCESO'"
                     [class.badge-closed]="s.estado === 'CERRADA'"
@@ -660,6 +669,12 @@ export class PqrsDetailComponent implements OnInit {
   protected puedeEditarPQRS = (): boolean => this.auth.can(P.PQRS_EDITAR);
   protected puedeDescargarPdf = (): boolean => this.auth.can(P.PQRS_DESCARGAR_PDF);
   protected puedeGestionarSeguimiento = (): boolean => this.auth.can(P.PQRS_SEGUIMIENTO_CREAR);
+  protected puedeAprobarBoceto = (): boolean => this.auth.can(P.PQRS_APROBAR_BOCETO);
+
+  /** Un boceto solo sale a Abierta/Rechazada con permiso de aprobación. */
+  protected puedeSalirDeBoceto(p: PQRSDetail): boolean {
+    return p.estado !== 'BOCETO' || this.puedeAprobarBoceto();
+  }
   protected puedeSubirEvidencia = (): boolean =>
     this.editMode() && (this.auth.can(P.PQRS_EVIDENCIA_SUBIR) || this.auth.can(P.PQRS_EDITAR));
 
@@ -755,8 +770,8 @@ export class PqrsDetailComponent implements OnInit {
     if (rol === 'ADMINISTRATIVO_COMERCIAL' || rol === 'ADMINISTRADOR_SEDE') {
       return areaCodigo !== 'CALIDAD';
     }
-    // En PQRS cerrada, del resto de roles solo CALIDAD sigue gestionando su área.
-    if (p.estado === 'CERRADA' && rol !== 'CALIDAD') return false;
+    // En PQRS cerrada, del resto de roles solo CALIDAD y LOGISTICA siguen gestionando su área.
+    if (p.estado === 'CERRADA' && rol !== 'CALIDAD' && rol !== 'LOGISTICA') return false;
     return rol === areaCodigo;
   }
 
@@ -810,6 +825,7 @@ export class PqrsDetailComponent implements OnInit {
     this.svc.detail(id).subscribe((p) => {
       this.pqrs.set(p);
       this.resetEditForm(p);
+      this.segForm.controls.estado.setValue(p.estado === 'BOCETO' ? 'BOCETO' : 'EN_PROCESO');
       this.resetProductoDrafts(p);
       this.resetAnalisisDrafts(p);
       this.resetSatisfaccionForm(p);

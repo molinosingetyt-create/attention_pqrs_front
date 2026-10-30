@@ -293,6 +293,7 @@ import { DashboardResponse } from '@app/core/models/api.models';
               </div>
               <div class="text-right">
                 <span class="badge"
+                      [class.badge-pending]="p.estado === 'BOCETO'"
                       [class.badge-open]="p.estado === 'ABIERTA'"
                       [class.badge-progress]="p.estado === 'EN_PROCESO'"
                       [class.badge-closed]="p.estado === 'CERRADA'"

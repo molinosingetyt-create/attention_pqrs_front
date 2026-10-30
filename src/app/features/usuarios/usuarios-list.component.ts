@@ -162,6 +162,7 @@ import { SedeService } from '@app/core/services/sede.service';
                 <option value="VENDEDOR">Vendedor</option>
                 <option value="ADMINISTRATIVO_COMERCIAL">Administrativo comercial</option>
                 <option value="CALIDAD">Calidad</option>
+                <option value="LOGISTICA">Logística</option>
               </select>
             </div>
             <div *ngIf="sedeVisible(form.controls.rol.value)">
@@ -207,6 +208,7 @@ import { SedeService } from '@app/core/services/sede.service';
                 <option value="VENDEDOR">Vendedor</option>
                 <option value="ADMINISTRATIVO_COMERCIAL">Administrativo comercial</option>
                 <option value="CALIDAD">Calidad</option>
+                <option value="LOGISTICA">Logística</option>
               </select>
             </div>
             <div *ngIf="sedeVisible(editForm.controls.rol.value)">

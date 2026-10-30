@@ -20,6 +20,7 @@ const TIPO_LABELS: Record<string, string> = {
 };
 
 const ESTADO_LABELS: Record<string, string> = {
+  BOCETO: 'Boceto',
   ABIERTA: 'Abierta',
   EN_PROCESO: 'En proceso',
   CERRADA: 'Cerrada',
@@ -133,6 +134,7 @@ const filtrosVacios = () => ({
                 <td>{{ p.numero_factura || '—' }}</td>
                 <td>
                   <span class="badge"
+                        [class.badge-pending]="p.estado === 'BOCETO'"
                         [class.badge-open]="p.estado === 'ABIERTA'"
                         [class.badge-progress]="p.estado === 'EN_PROCESO'"
                         [class.badge-closed]="p.estado === 'CERRADA'"
@@ -190,6 +192,7 @@ const filtrosVacios = () => ({
               <div class="flex items-center justify-between mb-1">
                 <span class="font-semibold text-sm">{{ p.radicado }} · {{ p.tipo }}</span>
                 <span class="badge"
+                      [class.badge-pending]="p.estado === 'BOCETO'"
                       [class.badge-open]="p.estado === 'ABIERTA'"
                       [class.badge-progress]="p.estado === 'EN_PROCESO'"
                       [class.badge-closed]="p.estado === 'CERRADA'"
@@ -269,6 +272,7 @@ const filtrosVacios = () => ({
                 <label class="label" for="f-estado">Estado</label>
                 <select id="f-estado" name="estado" [(ngModel)]="borrador.estado" class="input">
                   <option value="">Todos los estados</option>
+                  <option value="BOCETO">Boceto</option>
                   <option value="ABIERTA">Abierta</option>
                   <option value="EN_PROCESO">En proceso</option>
                   <option value="CERRADA">Cerrada</option>

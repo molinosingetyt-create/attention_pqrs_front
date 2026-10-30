@@ -545,7 +545,7 @@ export class PqrsFormComponent implements OnInit {
 
   private finalize(id: number): void {
     this.pqrs.notificarCalidad(id).subscribe({
-      next: () => this.finishCreate(id),
+      next: (r) => this.finishCreate(id, r.notificado),
       error: (e) => {
         this.saving.set(false);
         const msg = e?.error?.detail || 'Faltan fotos obligatorias por producto.';
@@ -555,8 +555,11 @@ export class PqrsFormComponent implements OnInit {
     });
   }
 
-  private finishCreate(id: number): void {
-    this.snack.open('PQRS creada correctamente', 'Cerrar', { duration: 2500 });
+  private finishCreate(id: number, notificado = true): void {
+    const msg = notificado
+      ? 'PQRS creada correctamente'
+      : 'PQRS creada como boceto. Se notificará al área cuando un administrador la abra.';
+    this.snack.open(msg, 'Cerrar', { duration: notificado ? 2500 : 4500 });
     this.router.navigate(['/pqrs', id]);
   }
 }

@@ -14,6 +14,7 @@ const ROLES: Rol[] = [
   'VENDEDOR',
   'ADMINISTRATIVO_COMERCIAL',
   'CALIDAD',
+  'LOGISTICA',
 ];
 
 @Component({

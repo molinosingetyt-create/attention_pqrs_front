@@ -19,7 +19,8 @@ import { PqrsService } from '@app/core/services/pqrs.service';
       </div>
       <p class="text-sm text-gray-600 max-w-3xl">
         PQRS cerradas con motivo: pendientes de radicar en el formulario de devoluciones.
-        Administración ve todas las áreas; calidad solo las del área CALIDAD.
+        Administración ve todas las áreas; calidad y logística solo las de su área
+        (logística con sede asignada, solo las de esa sede).
       </p>
 
       <div *ngIf="loading()" class="flex justify-center py-10">

@@ -149,7 +149,7 @@ export class PqrsService {
   }
 
   notificarCalidad(id: number) {
-    return this.http.post<{ ok: boolean }>(
+    return this.http.post<{ ok: boolean; notificado: boolean }>(
       `${this.api}/pqrs/${id}/notificar-calidad`,
       {}
     );
