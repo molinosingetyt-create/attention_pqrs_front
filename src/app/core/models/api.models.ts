@@ -32,7 +32,7 @@ export type TipoPQRS =
   | 'PETICION'
   | 'OTRO';
 
-export type EstadoPQRS = 'BOCETO' | 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'RECHAZADA';
+export type EstadoPQRS = 'BOCETO' | 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'RECHAZADA' | 'RECOGIDA';
 export type EstadoAreaResponsable = 'NO GESTIONADO' | 'PROCEDENTE' | 'NO PROCEDENTE';
 
 export interface Usuario {

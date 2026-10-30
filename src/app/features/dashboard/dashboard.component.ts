@@ -297,7 +297,7 @@ import { DashboardResponse } from '@app/core/models/api.models';
                       [class.badge-open]="p.estado === 'ABIERTA'"
                       [class.badge-progress]="p.estado === 'EN_PROCESO'"
                       [class.badge-closed]="p.estado === 'CERRADA'"
-                      [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                      [class.badge-rejected]="p.estado === 'RECHAZADA'" [class.badge-picked]="p.estado === 'RECOGIDA'">
                   {{ p.estado }}
                 </span>
                 <div class="text-xs text-gray-400 mt-1">

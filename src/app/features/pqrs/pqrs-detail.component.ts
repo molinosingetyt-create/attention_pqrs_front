@@ -80,6 +80,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
               <option value="EN_PROCESO" [disabled]="p.estado === 'BOCETO'">En proceso</option>
               <option value="CERRADA" [disabled]="p.estado === 'BOCETO'">Cerrada</option>
               <option value="RECHAZADA" [disabled]="!puedeSalirDeBoceto(p)">Rechazada</option>
+              <option value="RECOGIDA" [disabled]="!puedeMarcarRecogida(p)">Recogida</option>
             </select>
             <p *ngIf="p.estado === 'BOCETO'" class="text-xs text-gray-500 mt-1">
               {{ puedeAprobarBoceto()
@@ -156,7 +157,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
                   [class.badge-open]="p.estado === 'ABIERTA'"
                   [class.badge-progress]="p.estado === 'EN_PROCESO'"
                   [class.badge-closed]="p.estado === 'CERRADA'"
-                  [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                  [class.badge-rejected]="p.estado === 'RECHAZADA'" [class.badge-picked]="p.estado === 'RECOGIDA'">
               {{ p.estado }}
             </span>
           </div>
@@ -524,17 +525,21 @@ const emptyNuevoProducto = (): ProductoDraft => ({
       <!-- Seguimientos -->
       <div class="card">
         <h3 class="font-semibold mb-3">Historial / Seguimiento</h3>
-        <p *ngIf="pqrsEsTerminal(p)" class="text-sm text-gray-600 mb-4">
-          Esta PQRS está {{ p.estado === 'CERRADA' ? 'cerrada' : 'rechazada' }}; el historial queda en solo lectura.
+        <p *ngIf="pqrsEsTerminal(p) && !soloRecogida(p)" class="text-sm text-gray-600 mb-4">
+          Esta PQRS está {{ p.estado === 'RECHAZADA' ? 'rechazada' : 'cerrada' }}; el historial queda en solo lectura.
         </p>
-        <form *ngIf="puedeGestionarSeguimiento() && !pqrsEsTerminal(p)" [formGroup]="segForm" (ngSubmit)="addSeguimiento()"
+        <p *ngIf="soloRecogida(p) && puedeGestionarSeguimiento()" class="text-sm text-gray-600 mb-4">
+          Esta PQRS está cerrada; solo puede marcarse como recogida (una única vez).
+        </p>
+        <form *ngIf="puedeGestionarSeguimiento() && (!pqrsEsTerminal(p) || soloRecogida(p))" [formGroup]="segForm" (ngSubmit)="addSeguimiento()"
               class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
           <select class="input" formControlName="estado">
             <option *ngIf="p.estado === 'BOCETO'" value="BOCETO">Boceto</option>
-            <option value="ABIERTA" [disabled]="!puedeSalirDeBoceto(p)">Abierta</option>
-            <option value="EN_PROCESO" [disabled]="p.estado === 'BOCETO'">En proceso</option>
-            <option value="CERRADA" [disabled]="p.estado === 'BOCETO'">Cerrada</option>
-            <option value="RECHAZADA" [disabled]="!puedeSalirDeBoceto(p)">Rechazada</option>
+            <option value="ABIERTA" [disabled]="!puedeSalirDeBoceto(p) || soloRecogida(p)">Abierta</option>
+            <option value="EN_PROCESO" [disabled]="p.estado === 'BOCETO' || soloRecogida(p)">En proceso</option>
+            <option value="CERRADA" [disabled]="p.estado === 'BOCETO' || soloRecogida(p)">Cerrada</option>
+            <option value="RECHAZADA" [disabled]="!puedeSalirDeBoceto(p) || soloRecogida(p)">Rechazada</option>
+            <option value="RECOGIDA" [disabled]="!puedeMarcarRecogida(p)">Recogida</option>
           </select>
           <input class="input sm:col-span-1 lg:col-span-2" formControlName="descripcion"
                  placeholder="Descripción del seguimiento..." />
@@ -553,7 +558,7 @@ const emptyNuevoProducto = (): ProductoDraft => ({
                     [class.badge-open]="s.estado === 'ABIERTA'"
                     [class.badge-progress]="s.estado === 'EN_PROCESO'"
                     [class.badge-closed]="s.estado === 'CERRADA'"
-                    [class.badge-rejected]="s.estado === 'RECHAZADA'">{{ s.estado }}</span>
+                    [class.badge-rejected]="s.estado === 'RECHAZADA'" [class.badge-picked]="s.estado === 'RECOGIDA'">{{ s.estado }}</span>
               <span class="text-xs text-gray-500">
                 {{ s.fecha | date:'short' }} · {{ s.usuario_nombre || 'Sistema' }}
               </span>
@@ -775,8 +780,9 @@ export class PqrsDetailComponent implements OnInit {
     return rol === areaCodigo;
   }
 
+  /** La encuesta queda disponible en cualquier estado hasta que se registra; luego es solo lectura. */
   protected puedeGestionarSatisfaccion(p: PQRSDetail): boolean {
-    if (this.pqrsEsTerminal(p)) return false;
+    if (p.satisfaccion_cliente) return false;
     const rol = this.auth.currentUser()?.rol;
     return rol === 'ADMINISTRADOR' || rol === 'ADMINISTRATIVO_COMERCIAL' || rol === 'ADMINISTRADOR_SEDE';
   }
@@ -791,8 +797,28 @@ export class PqrsDetailComponent implements OnInit {
     );
   }
 
+  /** Cerrada, o recogida después del cierre (conserva fecha de cierre). */
+  protected pqrsCerrada(p: PQRSDetail): boolean {
+    return p.estado === 'CERRADA' || (p.estado === 'RECOGIDA' && !!p.fecha_cierre);
+  }
+
   protected pqrsEsTerminal(p: PQRSDetail): boolean {
-    return p.estado === 'CERRADA' || p.estado === 'RECHAZADA';
+    return p.estado === 'RECHAZADA' || this.pqrsCerrada(p);
+  }
+
+  /** El estado recogida se asigna una sola vez en la vida de la PQRS. */
+  protected yaFueRecogida(p: PQRSDetail): boolean {
+    return p.estado === 'RECOGIDA' || (p.seguimientos || []).some((s) => s.estado === 'RECOGIDA');
+  }
+
+  protected puedeMarcarRecogida(p: PQRSDetail): boolean {
+    if (p.estado === 'BOCETO' || (this.pqrsEsTerminal(p) && !this.soloRecogida(p))) return false;
+    return p.estado === 'RECOGIDA' || !this.yaFueRecogida(p);
+  }
+
+  /** PQRS cerrada que aún no se ha recogido: el único cambio posible es recogida. */
+  protected soloRecogida(p: PQRSDetail): boolean {
+    return p.estado === 'CERRADA' && !this.yaFueRecogida(p);
   }
 
   protected segForm = this.fb.nonNullable.group({
@@ -825,7 +851,9 @@ export class PqrsDetailComponent implements OnInit {
     this.svc.detail(id).subscribe((p) => {
       this.pqrs.set(p);
       this.resetEditForm(p);
-      this.segForm.controls.estado.setValue(p.estado === 'BOCETO' ? 'BOCETO' : 'EN_PROCESO');
+      this.segForm.controls.estado.setValue(
+        p.estado === 'BOCETO' ? 'BOCETO' : this.soloRecogida(p) ? 'RECOGIDA' : 'EN_PROCESO'
+      );
       this.resetProductoDrafts(p);
       this.resetAnalisisDrafts(p);
       this.resetSatisfaccionForm(p);

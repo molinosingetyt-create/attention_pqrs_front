@@ -324,6 +324,10 @@ h3 {
   background: #FCEFD9;
   color: #C7272D;
 }
+.badge-picked {
+  background: #dbeafe;
+  color: #103847;
+}
 .badge-pending {
   background: #e5e7eb;
   color: #4b5563;

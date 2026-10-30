@@ -25,6 +25,7 @@ const ESTADO_LABELS: Record<string, string> = {
   EN_PROCESO: 'En proceso',
   CERRADA: 'Cerrada',
   RECHAZADA: 'Rechazada',
+  RECOGIDA: 'Recogida',
 };
 
 const ESTADO_AREA_LABELS: Record<string, string> = {
@@ -45,6 +46,9 @@ const filtrosVacios = () => ({
   producto_catalogo_id: '' as number | '',
   vendedor_id: '' as number | '',
 });
+
+/** Prefijo de la clave en sessionStorage donde se recuerdan filtros y página. */
+const ESTADO_LISTADO_KEY = 'pqrs-list-estado';
 
 @Component({
   selector: 'app-pqrs-list',
@@ -138,7 +142,7 @@ const filtrosVacios = () => ({
                         [class.badge-open]="p.estado === 'ABIERTA'"
                         [class.badge-progress]="p.estado === 'EN_PROCESO'"
                         [class.badge-closed]="p.estado === 'CERRADA'"
-                        [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                        [class.badge-rejected]="p.estado === 'RECHAZADA'" [class.badge-picked]="p.estado === 'RECOGIDA'">
                     {{ p.estado }}
                   </span>
                 </td>
@@ -196,7 +200,7 @@ const filtrosVacios = () => ({
                       [class.badge-open]="p.estado === 'ABIERTA'"
                       [class.badge-progress]="p.estado === 'EN_PROCESO'"
                       [class.badge-closed]="p.estado === 'CERRADA'"
-                      [class.badge-rejected]="p.estado === 'RECHAZADA'">
+                      [class.badge-rejected]="p.estado === 'RECHAZADA'" [class.badge-picked]="p.estado === 'RECOGIDA'">
                   {{ p.estado }}
                 </span>
               </div>
@@ -277,6 +281,7 @@ const filtrosVacios = () => ({
                   <option value="EN_PROCESO">En proceso</option>
                   <option value="CERRADA">Cerrada</option>
                   <option value="RECHAZADA">Rechazada</option>
+                  <option value="RECOGIDA">Recogida</option>
                 </select>
               </div>
 
@@ -596,7 +601,38 @@ export class PqrsListComponent implements OnInit {
   protected puedeExportarExcel = (): boolean => this.auth.can(P.PQRS_EXPORTAR);
   protected puedeDescargarPdf = (): boolean => this.auth.can(P.PQRS_DESCARGAR_PDF);
 
+  /** Por usuario, para no heredar filtros de otra sesión en la misma pestaña. */
+  private estadoListadoKey(): string {
+    return `${ESTADO_LISTADO_KEY}:${this.auth.currentUser()?.id ?? ''}`;
+  }
+
+  /** Recupera filtros y página guardados al volver al listado. */
+  private restaurarEstadoListado(): void {
+    try {
+      const raw = sessionStorage.getItem(this.estadoListadoKey());
+      if (!raw) return;
+      const guardado = JSON.parse(raw);
+      this.filtros = { ...filtrosVacios(), ...(guardado.filtros || {}) };
+      const page = Number(guardado.page);
+      if (Number.isInteger(page) && page > 0) this.page.set(page);
+    } catch {
+      // Sin almacenamiento disponible o dato corrupto: se arranca sin filtros.
+    }
+  }
+
+  private guardarEstadoListado(): void {
+    try {
+      sessionStorage.setItem(
+        this.estadoListadoKey(),
+        JSON.stringify({ filtros: this.filtros, page: this.page() })
+      );
+    } catch {
+      // Ignorado: recordar los filtros es solo una comodidad.
+    }
+  }
+
   ngOnInit(): void {
+    this.restaurarEstadoListado();
     if (this.puedeFiltrarVendedor()) {
       this.usuarios.vendedores().subscribe({
         next: (list) => this.vendedores.set(list),
@@ -621,6 +657,7 @@ export class PqrsListComponent implements OnInit {
   }
 
   load(): void {
+    this.guardarEstadoListado();
     const params = { ...this.filtros, page: this.page(), size: 20 };
     if (!params.vendedor_id) delete params.vendedor_id;
     if (!params.inconformidad_id) delete params.inconformidad_id;
