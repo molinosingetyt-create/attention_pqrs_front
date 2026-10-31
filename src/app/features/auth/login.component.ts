@@ -31,6 +31,10 @@ import { AuthService } from '@app/core/services/auth.service';
           </div>
           <p class="brand-title">Gestión de PQRS</p>
           <p class="brand-sub">Peticiones, quejas, reclamos y sugerencias</p>
+          <div class="brand-version">
+            <span>Versión 2</span>
+            <span>2026-10-30</span>
+          </div>
         </aside>
 
         <div class="panel">
@@ -168,6 +172,15 @@ import { AuthService } from '@app/core/services/auth.service';
         font-size: 0.875rem;
         opacity: 0.85;
         max-width: 240px;
+      }
+      .brand-version {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.15rem;
+        margin-top: 0.75rem;
+        font-size: 0.75rem;
+        opacity: 0.75;
       }
       .panel {
         flex: 0 1 455px;
